@@ -4,10 +4,10 @@
 # Steps: bump version → engine rule lock → universal Release build → Developer ID sign → notarize app
 #        → DMG (signed, notarized, stapled) → site/downloads + release.json → GitHub Release → deploy site.
 set -e
-if [ "$1" = "--windows" ]; then exec "$(dirname "$0")/release_windows.sh" "${@:2}"; fi   # Windows lane, after the Mac release
+if [ "$1" = "--windows" ]; then echo "amiKey for Windows: push tag v<version>; .github/workflows/windows.yml builds, signs and publishes the GitHub release the app updates from"; exit 1; fi
 if [ "$1" = "--linux" ]; then exec "$(dirname "$0")/release_linux.sh" "${@:2}"; fi         # Linux lane
 if [ "$1" = "--android" ]; then exec "$(dirname "$0")/release_android.sh" "${@:2}"; fi   # Android lane
-VER=${1:?usage: release.sh <version> | release.sh --windows <version>}
+VER=${1:?usage: release.sh <version>}
 cd "$(dirname "$0")/../.."
 ROOT=$PWD
 KC=~/Library/Keychains/s10w-signing.keychain-db

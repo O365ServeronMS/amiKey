@@ -46,16 +46,17 @@ jobs:
         if: hashFiles('Windows/App/CMakeLists.txt') != ''
         run: |
           cmake -S Windows -B Windows/build -G Ninja -DCMAKE_BUILD_TYPE=Release
-          cmake --build Windows/build --config Release --target vikey
+          cmake --build Windows/build --config Release --target amikey
         shell: pwsh
       - uses: actions/upload-artifact@v4
         if: hashFiles('Windows/App/CMakeLists.txt') != ''
         with:
-          name: Vikey-windows-${{ matrix.arch }}
-          path: Windows/build/App/Vikey.exe
+          name: amiKey-windows-${{ matrix.arch }}
+          path: Windows/build/App/amiKey.exe
 
-  # Tag v<version> (pushed by Tools/release/release.sh): signed installers + portable zips onto the GitHub release.
-  # Without the Certum secrets the job fails, unless run by hand with allow_unsigned.
+  # Tag v<version>: signed installers, portable zips and the updater's amiKey-update-<arch>.txt onto the GitHub
+  # release (created if missing). Without the Certum or AMIKEY_UPDATE_KEY secrets the job fails, unless run by hand
+  # with allow_unsigned (then no update manifest is published, so installed copies don't update to it).
   package:
     needs: engine
     if: startsWith(github.ref, 'refs/tags/v') || inputs.release_tag != ''
@@ -73,7 +74,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
-      - name: "Sign Vikey.exe (ssign - Certum SimplySign cloud cert, headless)"
+      - name: "Sign amiKey.exe (ssign - Certum SimplySign cloud cert, headless)"
         env:
           CERTUM_EMAIL: ${{ secrets.CERTUM_EMAIL }}
           CERTUM_OTP: ${{ secrets.CERTUM_OTP }}
@@ -90,8 +91,8 @@ jobs:
           $exe = (Get-ChildItem ssign -Recurse -Filter ssign.exe | Select-Object -First 1).FullName
           "SSIGN=$exe" >> $env:GITHUB_ENV
           # one login signs the whole batch
-          & $exe artifacts/Vikey-windows-x64/Vikey.exe artifacts/Vikey-windows-arm64/Vikey.exe
-          if ($LASTEXITCODE -ne 0) { throw "signing Vikey.exe failed" }
+          & $exe artifacts/amiKey-windows-x64/amiKey.exe artifacts/amiKey-windows-arm64/amiKey.exe
+          if ($LASTEXITCODE -ne 0) { throw "signing amiKey.exe failed" }
         shell: pwsh
       - name: Installers (Inno Setup) + portable zips
         run: |
@@ -101,11 +102,11 @@ jobs:
           if (-not (Test-Path $iscc)) { choco install innosetup --version 6.7.1 -y --no-progress; if ($LASTEXITCODE -ne 0) { exit 1 } }
           New-Item -ItemType Directory -Force dist | Out-Null
           foreach ($arch in @('x64', 'arm64')) {
-            $src = "artifacts/Vikey-windows-$arch"
-            & $iscc "/DVersion=$ver" "/DArch=$arch" "/DSrc=$((Resolve-Path $src).Path)" Windows/installer/Vikey.iss
+            $src = "artifacts/amiKey-windows-$arch"
+            & $iscc "/DVersion=$ver" "/DArch=$arch" "/DSrc=$((Resolve-Path $src).Path)" Windows/installer/amiKey.iss
             if ($LASTEXITCODE -ne 0) { exit 1 }
-            Move-Item "Windows/installer/out/Vikey-$ver-$arch-Setup.exe" dist/
-            Compress-Archive -Path "$src/Vikey.exe" -DestinationPath "dist/Vikey-$ver-$arch-portable.zip"
+            Move-Item "Windows/installer/out/amiKey-$ver-$arch-Setup.exe" dist/
+            Compress-Archive -Path "$src/amiKey.exe" -DestinationPath "dist/amiKey-$ver-$arch-portable.zip"
           }
           Get-ChildItem dist | Out-Host
         shell: pwsh
@@ -118,8 +119,28 @@ jobs:
           & $env:SSIGN (Get-ChildItem dist -Filter *-Setup.exe).FullName
           if ($LASTEXITCODE -ne 0) { throw "signing installers failed" }
         shell: pwsh
+      - name: Update manifests (Ed25519, read by the app's updater)
+        env:
+          AMIKEY_UPDATE_KEY: ${{ secrets.AMIKEY_UPDATE_KEY }}
+          ALLOW_UNSIGNED: ${{ inputs.allow_unsigned }}
+        run: |
+          if (-not $env:AMIKEY_UPDATE_KEY) {
+            if ($env:ALLOW_UNSIGNED -eq 'true') { "::warning::No AMIKEY_UPDATE_KEY secret: no update manifest (allow_unsigned)" | Out-Host; exit 0 }
+            throw "No AMIKEY_UPDATE_KEY secret: installed copies could not update to this release (run by hand with allow_unsigned to override)"
+          }
+          python -m pip install --quiet cryptography
+          $ver = (Select-String -Path project.yml -Pattern 'MARKETING_VERSION: "([^"]+)"').Matches[0].Groups[1].Value
+          foreach ($arch in @('x64', 'arm64')) {
+            $f = "amiKey-$ver-$arch-Setup.exe"
+            python Tools/release/sign_update.py $ver $arch "dist/$f" "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$env:RELEASE_TAG/$f" "dist/amiKey-update-$arch.txt"
+            if ($LASTEXITCODE -ne 0) { exit 1 }
+          }
+        shell: pwsh
       - name: Upload to the release
-        run: gh release upload "$env:RELEASE_TAG" dist/* --clobber -R "$env:GITHUB_REPOSITORY"
+        run: |
+          gh release view "$env:RELEASE_TAG" -R "$env:GITHUB_REPOSITORY" *> $null
+          if ($LASTEXITCODE -ne 0) { gh release create "$env:RELEASE_TAG" --verify-tag --title "amiKey $env:RELEASE_TAG" --generate-notes -R "$env:GITHUB_REPOSITORY"; if ($LASTEXITCODE -ne 0) { exit 1 } }
+          gh release upload "$env:RELEASE_TAG" dist/* --clobber -R "$env:GITHUB_REPOSITORY"
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}

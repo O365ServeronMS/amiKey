@@ -3,9 +3,12 @@
 #define IDR_SOUND_VI 201
 #define IDR_SOUND_EN 202
 #define IDR_EMOJI_JSON 203
-#ifndef VIKEY_VERSION
-#define VIKEY_VERSION "0.1.0"
+#ifndef AMIKEY_VERSION
+#define AMIKEY_VERSION "0.1.0"
 #endif
-#define VIKEY_W2(x) L##x
-#define VIKEY_W(x) VIKEY_W2(x)
-#define VIKEY_VERSION_W VIKEY_W(VIKEY_VERSION)
+#ifndef AMIKEY_VERSION_NUM
+#define AMIKEY_VERSION_NUM 0,1,0,0
+#endif
+#define AMIKEY_W2(x) L##x
+#define AMIKEY_W(x) AMIKEY_W2(x)
+#define AMIKEY_VERSION_W AMIKEY_W(AMIKEY_VERSION)

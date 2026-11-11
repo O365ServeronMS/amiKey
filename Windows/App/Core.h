@@ -6,7 +6,7 @@
 #include <string>
 #include <functional>
 
-namespace vikey { namespace core {
+namespace amikey { namespace core {
 
 bool start();                       // install hooks (needs a message loop on the calling thread)
 void stop();

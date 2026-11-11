@@ -14,22 +14,23 @@
 #include <vector>
 #include <algorithm>
 
-#ifndef VIKEY_BUILD
-#define VIKEY_BUILD "0"
+#ifndef AMIKEY_BUILD
+#define AMIKEY_BUILD "0"
 #endif
 #if defined(_M_ARM64)
-#define VIKEY_ARCH "arm64"
+#define AMIKEY_ARCH "arm64"
 #elif defined(_M_X64)
-#define VIKEY_ARCH "x64"
+#define AMIKEY_ARCH "x64"
 #else
-#define VIKEY_ARCH "x86"
+#define AMIKEY_ARCH "x86"
 #endif
 
-namespace vikey { namespace crash {
+namespace amikey { namespace crash {
 
 static const wchar_t* AUTO_KEY = L"CrashReportsAuto";        // the user chose "always send, don't ask"
 static const wchar_t* SEEN_KEY = L"CrashReportsSeenUntil";   // unix seconds, as a string
-static const wchar_t* DEFAULT_ENDPOINT = L"https://vikey.app/api/crash";
+// No crash server: reports stay on disk unless the hidden "crashEndpoint" pref names one.
+static std::wstring endpoint() { return prefs::getString(L"crashEndpoint", L""); }
 
 // Everything the crash handler needs is prepared at install time: it runs in a broken process and should not allocate.
 static wchar_t _dir[MAX_PATH];
@@ -77,7 +78,7 @@ struct Out { char buf[16384]; int len = 0;
 };
 static Out _out;   // static: no allocation, and a stack overflow leaves little room
 
-/// "Vikey.exe+0x1a2b3": the module file name (no folder) and the offset in it.
+/// "amiKey.exe+0x1a2b3": the module file name (no folder) and the offset in it.
 static void addLocation(Out& o, DWORD64 pc) {
     HMODULE m = nullptr;
     if (GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCWSTR)pc, &m) && m) {
@@ -154,8 +155,8 @@ static void writeReport(const char* reason, EXCEPTION_RECORD* rec, CONTEXT* ctx)
     if (InterlockedExchange(&_writing, 1)) return;   // one report per crash
     Out& o = _out; o.len = 0; o.buf[0] = 0;
     SYSTEMTIME t; GetLocalTime(&t);
-    o.add("Vikey crash report\n");
-    o.add("Vikey: %s (%s) %s\n", VIKEY_VERSION, VIKEY_BUILD, VIKEY_ARCH);
+    o.add("amiKey crash report\n");
+    o.add("amiKey: %s (%s) %s\n", AMIKEY_VERSION, AMIKEY_BUILD, AMIKEY_ARCH);
     o.add("OS: %s\n", _os);
     o.add("Time: %04d-%02d-%02d %02d:%02d:%02d (local)\n", t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond);
     o.add("Thread: %lu%s\n", GetCurrentThreadId(), GetCurrentThreadId() == _mainThread ? " (main)" : "");
@@ -172,7 +173,7 @@ static void writeReport(const char* reason, EXCEPTION_RECORD* rec, CONTEXT* ctx)
     if (ctx) addStack(o, *ctx);
 
     wchar_t path[MAX_PATH];
-    _snwprintf_s(path, _TRUNCATE, L"%s\\Vikey-%04d-%02d-%02d-%02d%02d%02d.txt", _dir, t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond);
+    _snwprintf_s(path, _TRUNCATE, L"%s\\amiKey-%04d-%02d-%02d-%02d%02d%02d.txt", _dir, t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond);
     HANDLE f = CreateFileW(path, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
     if (f != INVALID_HANDLE_VALUE) { DWORD w = 0; WriteFile(f, o.buf, (DWORD)o.len, &w, nullptr); FlushFileBuffers(f); CloseHandle(f); }
 }
@@ -225,7 +226,7 @@ static std::wstring newestPending() {
     long long seen = _wtoi64(prefs::getString(SEEN_KEY, L"0").c_str());
     long long since = std::max(seen, nowUnix() - 3 * 86400);
     WIN32_FIND_DATAW fd; std::wstring best; long long bestT = since;
-    HANDLE h = FindFirstFileW((std::wstring(_dir) + L"\\Vikey-*.txt").c_str(), &fd);
+    HANDLE h = FindFirstFileW((std::wstring(_dir) + L"\\amiKey-*.txt").c_str(), &fd);
     if (h == INVALID_HANDLE_VALUE) return L"";
     do {
         long long t = fileUnix(fd.ftLastWriteTime);
@@ -261,16 +262,16 @@ static void send(const std::wstring& report) {
         std::replace(h.begin(), h.end(), '\\', '/'); replaceAllNoCase(text, h, "~");
     }
     std::string name = narrow(report.substr(report.find_last_of(L'\\') + 1));
-    char rnd[32]; _snprintf_s(rnd, _TRUNCATE, "vikey-%08lx%08lx", GetTickCount(), GetCurrentProcessId());
+    char rnd[32]; _snprintf_s(rnd, _TRUNCATE, "amikey-%08lx%08lx", GetTickCount(), GetCurrentProcessId());
     std::string boundary = rnd, body;
     auto field = [&](const char* k, const std::string& v) { body += "--" + boundary + "\r\nContent-Disposition: form-data; name=\"" + k + "\"\r\n\r\n" + v + "\r\n"; };
-    field("platform", "windows"); field("version", std::string(VIKEY_VERSION) + " (" + VIKEY_BUILD + ")"); field("os", _os);
+    field("platform", "windows"); field("version", std::string(AMIKEY_VERSION) + " (" + AMIKEY_BUILD + ")"); field("os", _os);
     body += "--" + boundary + "\r\nContent-Disposition: form-data; name=\"report\"; filename=\"" + name + "\"\r\nContent-Type: text/plain\r\n\r\n" + text + "\r\n--" + boundary + "--\r\n";
 
-    std::wstring url = prefs::getString(L"crashEndpoint", L""); if (url.empty()) url = DEFAULT_ENDPOINT;
+    std::wstring url = endpoint(); if (url.empty()) return;
     URL_COMPONENTS uc = {sizeof(uc)}; wchar_t host[256], path[2048]; uc.lpszHostName = host; uc.dwHostNameLength = 256; uc.lpszUrlPath = path; uc.dwUrlPathLength = 2048;
     if (!WinHttpCrackUrl(url.c_str(), 0, 0, &uc)) return;
-    HINTERNET s = WinHttpOpen(L"Vikey/" VIKEY_VERSION_W, WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+    HINTERNET s = WinHttpOpen(L"amiKey/" AMIKEY_VERSION_W, WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
     if (!s) return;
     HINTERNET c = WinHttpConnect(s, host, uc.nPort, 0);
     HINTERNET r = c ? WinHttpOpenRequest(c, L"POST", path, nullptr, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, uc.nScheme == INTERNET_SCHEME_HTTPS ? WINHTTP_FLAG_SECURE : 0) : nullptr;
@@ -297,13 +298,13 @@ static HRESULT CALLBACK dialogCallback(HWND h, UINT msg, WPARAM, LPARAM, LONG_PT
 
 /// true = send. Sets "always send" when the box is ticked.
 static bool ask() {
-    const wchar_t* main = L"Vikey vừa bị thoát đột ngột";
-    const wchar_t* content = L"Gửi báo cáo lỗi để Vikey sửa lỗi này? Báo cáo chỉ có thông tin kỹ thuật: vị trí lỗi trong mã, phiên bản Vikey và Windows. Không có chữ bạn đã gõ.";
+    const wchar_t* main = L"amiKey vừa bị thoát đột ngột";
+    const wchar_t* content = L"Gửi báo cáo lỗi để amiKey sửa lỗi này? Báo cáo chỉ có thông tin kỹ thuật: vị trí lỗi trong mã, phiên bản amiKey và Windows. Không có chữ bạn đã gõ.";
     TASKDIALOG_BUTTON buttons[] = {{IDYES, L"Gửi báo cáo"}, {IDNO, L"Không gửi"}};
     TASKDIALOGCONFIG tc = {sizeof(tc)};
     tc.hInstance = GetModuleHandleW(nullptr);
     tc.dwFlags = TDF_ALLOW_DIALOG_CANCELLATION | TDF_POSITION_RELATIVE_TO_WINDOW;
-    tc.pszWindowTitle = L"Vikey";
+    tc.pszWindowTitle = L"amiKey";
     tc.pszMainIcon = MAKEINTRESOURCEW(IDI_APP);
     tc.pszMainInstruction = main;
     tc.pszContent = content;
@@ -313,7 +314,7 @@ static bool ask() {
     int button = 0; BOOL always = FALSE;
     if (FAILED(TaskDialogIndirect(&tc, &button, nullptr, &always))) {   // no common controls 6: a plain message box
         std::wstring text = std::wstring(main) + L"\n\n" + content;
-        button = MessageBoxW(nullptr, text.c_str(), L"Vikey", MB_YESNO | MB_ICONWARNING | MB_TOPMOST | MB_SETFOREGROUND);
+        button = MessageBoxW(nullptr, text.c_str(), L"amiKey", MB_YESNO | MB_ICONWARNING | MB_TOPMOST | MB_SETFOREGROUND);
         always = FALSE;
     }
     bool yes = button == IDYES;
@@ -329,6 +330,7 @@ static DWORD WINAPI launchThread(LPVOID p) {
 }
 
 void checkAtLaunch() {
+    if (endpoint().empty()) return;   // nowhere to send: the report just stays in the Crashes folder
     std::wstring newest = newestPending();
     if (newest.empty()) return;
     prefs::setString(SEEN_KEY, std::to_wstring(nowUnix()));   // handled, whatever the answer; older ones go with it

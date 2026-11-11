@@ -24,10 +24,10 @@ static int vEmojiHotkey = 0;
 static volatile bool vEmojiOpen = false;
 static HWND vEmojiWindow = nullptr;
 
-namespace vikey { namespace core {
+namespace amikey { namespace core {
 
 /// The switch sound (Tony picked "sparkle", 2026-10-29): two tiny notes, rising into Vietnamese, falling into
-/// English. The same WAVs as the Mac's .caf files, embedded in Vikey.exe (Vikey.rc).
+/// English. The same WAVs as the Mac's .caf files, embedded in amiKey.exe (amiKey.rc).
 static void PlaySwitchSound(int language) {
     static const void* data[2] = {nullptr, nullptr};
     int i = language == 1 ? 1 : 0;
@@ -40,8 +40,8 @@ static void PlaySwitchSound(int language) {
     PlaySoundW((LPCWSTR)data[i], nullptr, SND_MEMORY | SND_ASYNC | SND_NODEFAULT);
 }
 
-// Marks keystrokes Vikey posts itself, so the hook can skip them (dwExtraInfo).
-static const ULONG_PTR VIKEY_EVENT_TAG = 0x0F341991;
+// Marks keystrokes amiKey posts itself, so the hook can skip them (dwExtraInfo).
+static const ULONG_PTR AMIKEY_EVENT_TAG = 0x0F341991;
 static const int EMPTY_HOTKEY = 0xFE0000FE;
 
 // modifier flags, mirroring CGEventFlags usage on macOS
@@ -290,10 +290,10 @@ void reloadSettings() {
 
 // ---- Sending output ----------------------------------------------------------------------
 static void inputKey(INPUT& in, WORD vk, bool down, DWORD extra = 0) {
-    in = {}; in.type = INPUT_KEYBOARD; in.ki.wVk = vk; in.ki.dwFlags = (down ? 0 : KEYEVENTF_KEYUP) | extra; in.ki.dwExtraInfo = VIKEY_EVENT_TAG;
+    in = {}; in.type = INPUT_KEYBOARD; in.ki.wVk = vk; in.ki.dwFlags = (down ? 0 : KEYEVENTF_KEYUP) | extra; in.ki.dwExtraInfo = AMIKEY_EVENT_TAG;
 }
 static void inputChar(INPUT& in, wchar_t c, bool down) {
-    in = {}; in.type = INPUT_KEYBOARD; in.ki.wScan = c; in.ki.dwFlags = KEYEVENTF_UNICODE | (down ? 0 : KEYEVENTF_KEYUP); in.ki.dwExtraInfo = VIKEY_EVENT_TAG;
+    in = {}; in.type = INPUT_KEYBOARD; in.ki.wScan = c; in.ki.dwFlags = KEYEVENTF_UNICODE | (down ? 0 : KEYEVENTF_KEYUP); in.ki.dwExtraInfo = AMIKEY_EVENT_TAG;
 }
 static std::vector<INPUT> _batch;
 static void batchBackspaces(int n) { for (int i = 0; i < n; i++) { INPUT a, b; inputKey(a, VK_BACK, true); inputKey(b, VK_BACK, false); _batch.push_back(a); _batch.push_back(b); } }
@@ -525,7 +525,7 @@ static bool modifierVk(DWORD vk, bool down) {
 static LRESULT CALLBACK keyboardHook(int nCode, WPARAM wParam, LPARAM lParam) {
     if (nCode != HC_ACTION) return CallNextHookEx(_kbHook, nCode, wParam, lParam);
     KBDLLHOOKSTRUCT* k = (KBDLLHOOKSTRUCT*)lParam;
-    if (k->dwExtraInfo == VIKEY_EVENT_TAG) return CallNextHookEx(_kbHook, nCode, wParam, lParam);   // our own output
+    if (k->dwExtraInfo == AMIKEY_EVENT_TAG) return CallNextHookEx(_kbHook, nCode, wParam, lParam);   // our own output
     bool down = wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN;
     // modifiers as Windows has them, not only from the events seen here: keys let go on the lock screen (Win+L) or
     // after Ctrl+Alt+Del never reach the hook, and a Win or Alt left set stops Telex until that key is tapped again
