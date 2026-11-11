@@ -1,6 +1,6 @@
 """Builds the Windows icons and the wordmark image from the logos in design/.
 
-  amiKey.ico                          app icon: the framed VE logo recolored to ami blue, 16-256 px
+  amiKey.ico                          app + installer icon: the framed blue/orange VE logo, 16-256 px
   Icons/tray-{V,E}-{light,dark}.ico   tray glyphs in the logo's style (square frame + slanted letter) in ami blue,
                                       for a light / a dark taskbar (a lighter blue there). Each size is drawn natively.
   Resources/ami-wordmark.png          the "ami" of design/ami-logo.jpg (no tagline, no (R)) on transparency;
@@ -10,18 +10,17 @@ usage: python Tools/icons/make_windows_icons.py
 """
 import os
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont, ImageOps
+from PIL import Image, ImageDraw, ImageFont
 
 ROOT = os.path.join(os.path.dirname(__file__), "..", "..")
 APP = os.path.join(ROOT, "Windows", "App")
 FONT = r"C:\Windows\Fonts\seguibli.ttf"   # Segoe UI Black Italic
 AMI_BLUE = (4, 102, 177)                  # sampled from design/ami-logo.jpg
 
-# app icon: the VE logo cropped to its frame, its greys mapped onto ami blue
-logo = Image.open(os.path.join(ROOT, "design", "amiKey-logo.jpg")).convert("RGB")
-box = (200, 203, 824, 809)   # the frame's outer edges (~624 x 606, squared on resize)
-gray = ImageOps.grayscale(logo.crop(box).resize((256, 256), Image.LANCZOS))
-app = ImageOps.colorize(gray, black=(0, 38, 84), mid=AMI_BLUE, white=(255, 255, 255), midpoint=110)
+# app icon: the blue/orange VE logo cropped to its frame (the frame is the icon's edge)
+logo = Image.open(os.path.join(ROOT, "design", "amiKey-logo.png")).convert("RGBA")
+box = (18, 26, 634, 627)   # the frame's outer edges (~616 x 601, squared on resize)
+app = logo.crop(box).resize((256, 256), Image.LANCZOS)
 app.save(os.path.join(APP, "amiKey.ico"), sizes=[(s, s) for s in (16, 20, 24, 32, 40, 48, 64, 96, 128, 256)])
 
 def glyph(letter, size, rgb):

@@ -32,8 +32,8 @@ Code that implements it: `Windows/App/Settings.cpp` (colors, `drawWordmark`), `T
 - Headlines bold; body regular. Short lines, no orphans, no split phrases.
 
 ## Icon
-- `design/amiKey-logo.jpg`: the "VE" monogram in a square frame. The app icon (`Windows/App/amiKey.ico`) is this
-  logo cropped to its frame and recolored to ami blue. Don't recolor it or put it on a busy background.
+- `design/amiKey-logo.png`: the "VE" monogram in a square frame, V in ami blue, E in orange, a red dot where they
+  meet. The app and installer icon (`Windows/App/amiKey.ico`) is this logo cropped to its frame. Don't recolor it or put it on a busy background.
 - Tray: `Windows/App/Icons/tray-{V,E}-{light,dark}.ico`, a square frame with a slanted V (Vietnamese) or E (English)
   in ami blue on a light taskbar, and a lighter blue `#5AAEF0` on a dark one. Rebuild all icons with `python Tools/icons/make_windows_icons.py`.
 
