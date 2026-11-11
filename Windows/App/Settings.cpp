@@ -39,8 +39,8 @@ namespace amikey { namespace ui {
 // ---- shared look ---------------------------------------------------------------------------
 static HFONT fBody, fBodyBold, fSmall, fWordmark, fTitle, fMono, fTitle2, fCallout, fMonoBold, fWordmark24;
 static const COLORREF BG = RGB(246, 246, 246), GROUP = RGB(255, 255, 255), BORDER = RGB(226, 226, 226), SEP = RGB(236, 236, 236);
-static const COLORREF TEXT = RGB(0, 0, 0), SECONDARY = RGB(110, 110, 115), TERTIARY = RGB(170, 170, 175), ACCENT = RGB(10, 124, 255), GREEN = RGB(52, 199, 89), TOGGLE_OFF = RGB(233, 233, 235);
-static const COLORREF BRAND = RGB(79, 70, 229);   // design/BRAND.md #4F46E5
+static const COLORREF TEXT = RGB(0, 0, 0), SECONDARY = RGB(110, 110, 115), TERTIARY = RGB(170, 170, 175), ACCENT = RGB(4, 102, 177), GREEN = RGB(52, 199, 89), TOGGLE_OFF = RGB(233, 233, 235);
+static const COLORREF BRAND = RGB(4, 102, 177);   // design/BRAND.md: ami blue #0466B1
 static const COLORREF KEY_ORANGE = RGB(248, 152, 0);   // design/BRAND.md: the wordmark's "Key" #F89800
 static const int W = 460, MARGIN = 20, ROW = 34, GAP = 12, RADIUS = 10;   // fits a 1366x768 screen with every row shown
 static ULONG_PTR gdipToken = 0;
@@ -87,11 +87,12 @@ static Bitmap* amiLogo() {
     return b;
 }
 static const float AMI_LETTERS = 0.66f;   // the letters' share of the logo's height (the red dot is above them)
-/// Logo size for font f: its letters as tall as the font's capitals.
+static const float AMI_SCALE = 1.25f;     // the logo's letters are this much taller than the capitals of "Key"
+/// Logo size for font f: its letters AMI_SCALE times the font's capitals.
 static SizeF logoSize(HDC dc, HFONT f) {
     Bitmap* b = amiLogo(); if (!b) return SizeF(0, 0);
     SelectObject(dc, f); TEXTMETRICW tm; GetTextMetricsW(dc, &tm);
-    float h = (tm.tmAscent - tm.tmInternalLeading) / AMI_LETTERS;
+    float h = (tm.tmAscent - tm.tmInternalLeading) * AMI_SCALE / AMI_LETTERS;
     return SizeF(h * b->GetWidth() / b->GetHeight(), h);
 }
 static int wordmarkWidth(HDC dc, HFONT f) { SizeF s = logoSize(dc, f); return (s.Width ? (int)(s.Width + 0.5f) + 3 : textWidth(dc, f, L"ami")) + textWidth(dc, f, L"Key"); }

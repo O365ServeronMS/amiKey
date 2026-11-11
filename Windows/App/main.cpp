@@ -30,9 +30,9 @@ enum { ID_VIET = 100, ID_ENG, ID_SETTINGS, ID_AUTOSWITCH, ID_UPDATE, ID_LOGTOGGL
 static HWND _hwnd; static NOTIFYICONDATAW _nid = {};
 static HICON _iconV, _iconE;
 
-/// The tray glyph: the V or E icon in the logo's style (Icons/tray-*.ico), white on a dark taskbar, black on a light one.
+/// The tray glyph: the V or E icon in the logo's style (Icons/tray-*.ico), ami blue, lighter on a dark taskbar.
 static HICON makeIcon(wchar_t letter, bool dark) {
-    int id = letter == L'V' ? (dark ? IDI_TRAY_V_WHITE : IDI_TRAY_V_BLACK) : (dark ? IDI_TRAY_E_WHITE : IDI_TRAY_E_BLACK);
+    int id = letter == L'V' ? (dark ? IDI_TRAY_V_DARK : IDI_TRAY_V_LIGHT) : (dark ? IDI_TRAY_E_DARK : IDI_TRAY_E_LIGHT);
     HICON h = nullptr; LoadIconMetric(GetModuleHandleW(nullptr), MAKEINTRESOURCEW(id), LIM_SMALL, &h);   // the size for this DPI
     return h;
 }

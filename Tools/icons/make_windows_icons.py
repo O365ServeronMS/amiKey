@@ -1,8 +1,8 @@
 """Builds the Windows icons and the wordmark image from the logos in design/.
 
   amiKey.ico                          app icon: the framed VE logo recolored to ami blue, 16-256 px
-  Icons/tray-{V,E}-{black,white}.ico  tray glyphs in the logo's style (square frame + slanted letter);
-                                      black for a light taskbar, white for a dark one. Each size is drawn natively.
+  Icons/tray-{V,E}-{light,dark}.ico   tray glyphs in the logo's style (square frame + slanted letter) in ami blue,
+                                      for a light / a dark taskbar (a lighter blue there). Each size is drawn natively.
   Resources/ami-wordmark.png          the "ami" of design/ami-logo.jpg (no tagline, no (R)) on transparency;
                                       the app draws it followed by "Key" in orange.
 
@@ -34,8 +34,9 @@ def glyph(letter, size, rgb):
     d.text(((S - (r - l)) / 2 - l, (S - (b - t)) / 2 - t), letter, font=f, fill=rgb + (255,))
     return im.resize((size, size), Image.LANCZOS)
 
+os.makedirs(os.path.join(APP, "Icons"), exist_ok=True)
 for letter in "VE":
-    for name, rgb in (("black", (0, 0, 0)), ("white", (255, 255, 255))):
+    for name, rgb in (("light", AMI_BLUE), ("dark", (90, 174, 240))):
         imgs = [glyph(letter, s, rgb) for s in (16, 20, 24, 32, 40, 48, 64)]
         imgs[-1].save(os.path.join(APP, "Icons", f"tray-{letter}-{name}.ico"), sizes=[i.size for i in imgs], append_images=imgs[:-1])
 

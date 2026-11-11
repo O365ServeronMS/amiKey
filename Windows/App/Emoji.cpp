@@ -331,7 +331,7 @@ static ID2D1Factory* _d2d; static IDWriteFactory* _dw; static ID2D1HwndRenderTar
 static IDWriteTextFormat *_fSearch, *_fHeader, *_fFooter, *_fEmoji, *_fEmojiFooter, *_fTone, *_fWordmark, *_fBadge, *_fEmpty;
 static ID2D1SolidColorBrush *_bText, *_bSecondary, *_bTertiary, *_bBrand, *_bBrandSoft, *_bSep, *_bBadge, *_bSelect;
 static float _dpi = 96;
-static const D2D1_COLOR_F BRAND = D2D1::ColorF(0x4F46E5);
+static const D2D1_COLOR_F BRAND = D2D1::ColorF(0x0466B1);
 static const UINT TIMER_CARET = 1;
 
 static IDWriteTextFormat* fmt(const wchar_t* face, float size, DWRITE_FONT_WEIGHT w = DWRITE_FONT_WEIGHT_NORMAL, bool center = false) {
