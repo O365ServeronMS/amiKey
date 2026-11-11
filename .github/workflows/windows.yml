@@ -1,0 +1,125 @@
+name: windows
+on:
+  push:
+    branches: [windows, main]
+    tags: ['v*']
+    paths: [Engine/**, Tools/autoswitch/**, Windows/**, App/Resources/Emoji.json, project.yml, .github/workflows/windows.yml]
+  pull_request:
+    paths: [Engine/**, Tools/autoswitch/**, Windows/**, App/Resources/Emoji.json, project.yml, .github/workflows/windows.yml]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Existing GitHub release tag to build from, package for and upload to (e.g. v1.0.14)"
+        required: false
+      allow_unsigned:
+        description: "Upload unsigned installers when the Certum secrets are missing"
+        type: boolean
+        default: false
+jobs:
+  engine:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            arch: x64
+          - runner: windows-11-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_tag && format('refs/tags/{0}', inputs.release_tag) || '' }}
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.arch }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Ninja
+        run: choco install ninja -y --no-progress
+        shell: pwsh
+      - name: Engine lock (rule cases, golden, Telex lock, driver parity, perf)
+        run: pwsh Windows/check.ps1
+        shell: pwsh
+      - name: Build app (version from project.yml, like the Mac app)
+        if: hashFiles('Windows/App/CMakeLists.txt') != ''
+        run: |
+          cmake -S Windows -B Windows/build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build Windows/build --config Release --target vikey
+        shell: pwsh
+      - uses: actions/upload-artifact@v4
+        if: hashFiles('Windows/App/CMakeLists.txt') != ''
+        with:
+          name: Vikey-windows-${{ matrix.arch }}
+          path: Windows/build/App/Vikey.exe
+
+  # Tag v<version> (pushed by Tools/release/release.sh): signed installers + portable zips onto the GitHub release.
+  # Without the Certum secrets the job fails, unless run by hand with allow_unsigned.
+  package:
+    needs: engine
+    if: startsWith(github.ref, 'refs/tags/v') || inputs.release_tag != ''
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
+      SSIGN_URL: https://github.com/Le-Syl21/ssign/releases/download/v0.1.8/ssign-windows-x86_64.zip
+      SSIGN_SHA256: 89cbac647d19819a1a82645d2254ac51d2b34050835421294584385dadde1298
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_tag && format('refs/tags/{0}', inputs.release_tag) || '' }}
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: "Sign Vikey.exe (ssign - Certum SimplySign cloud cert, headless)"
+        env:
+          CERTUM_EMAIL: ${{ secrets.CERTUM_EMAIL }}
+          CERTUM_OTP: ${{ secrets.CERTUM_OTP }}
+          ALLOW_UNSIGNED: ${{ inputs.allow_unsigned }}
+        run: |
+          if (-not $env:CERTUM_OTP) {
+            if ($env:ALLOW_UNSIGNED -eq 'true') { "::warning::No CERTUM_OTP secret: packaging UNSIGNED (allow_unsigned)" | Out-Host; exit 0 }
+            throw "No CERTUM_OTP secret: refusing to publish unsigned installers (run by hand with allow_unsigned to override)"
+          }
+          Invoke-WebRequest -Uri $env:SSIGN_URL -OutFile ssign.zip
+          $hash = (Get-FileHash ssign.zip -Algorithm SHA256).Hash.ToLower()
+          if ($hash -ne $env:SSIGN_SHA256) { throw "ssign.zip checksum mismatch: $hash" }
+          Expand-Archive ssign.zip -DestinationPath ssign
+          $exe = (Get-ChildItem ssign -Recurse -Filter ssign.exe | Select-Object -First 1).FullName
+          "SSIGN=$exe" >> $env:GITHUB_ENV
+          # one login signs the whole batch
+          & $exe artifacts/Vikey-windows-x64/Vikey.exe artifacts/Vikey-windows-arm64/Vikey.exe
+          if ($LASTEXITCODE -ne 0) { throw "signing Vikey.exe failed" }
+        shell: pwsh
+      - name: Installers (Inno Setup) + portable zips
+        run: |
+          $ver = (Select-String -Path project.yml -Pattern 'MARKETING_VERSION: "([^"]+)"').Matches[0].Groups[1].Value
+          "$ver" | Out-Host
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup --version 6.7.1 -y --no-progress; if ($LASTEXITCODE -ne 0) { exit 1 } }
+          New-Item -ItemType Directory -Force dist | Out-Null
+          foreach ($arch in @('x64', 'arm64')) {
+            $src = "artifacts/Vikey-windows-$arch"
+            & $iscc "/DVersion=$ver" "/DArch=$arch" "/DSrc=$((Resolve-Path $src).Path)" Windows/installer/Vikey.iss
+            if ($LASTEXITCODE -ne 0) { exit 1 }
+            Move-Item "Windows/installer/out/Vikey-$ver-$arch-Setup.exe" dist/
+            Compress-Archive -Path "$src/Vikey.exe" -DestinationPath "dist/Vikey-$ver-$arch-portable.zip"
+          }
+          Get-ChildItem dist | Out-Host
+        shell: pwsh
+      - name: Sign installers
+        if: env.SSIGN != ''
+        env:
+          CERTUM_EMAIL: ${{ secrets.CERTUM_EMAIL }}
+          CERTUM_OTP: ${{ secrets.CERTUM_OTP }}
+        run: |
+          & $env:SSIGN (Get-ChildItem dist -Filter *-Setup.exe).FullName
+          if ($LASTEXITCODE -ne 0) { throw "signing installers failed" }
+        shell: pwsh
+      - name: Upload to the release
+        run: gh release upload "$env:RELEASE_TAG" dist/* --clobber -R "$env:GITHUB_REPOSITORY"
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
