@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Vikey quality scorecard, from the public repo only (runs on CI).
+"""amiKey quality scorecard, from the public repo only (runs on CI).
 
   scorecard.py                      the current engine
   scorecard.py --compare REF        and the engine at git REF (e.g. origin/main, HEAD~5), side by side
@@ -17,7 +17,7 @@ Numbers (higher is better unless marked ↓):
   auto-correct        iOS/Android: right words changed on clean typing ↓, wrong words left on sloppy typing ↓
   speed ↓             engine time per key (ns)
   edge cases          rules.tsv cases this engine passes (the current list, so an older engine shows the gap)
-  reported bugs       engine bugs Tony reported (rules/reported.tsv, his exact keys) that this engine gets right
+  reported bugs       engine bugs the maintainer reported (rules/reported.tsv, the exact keys typed) that this engine gets right
 The tools (simulators, harness) are always the current ones; only the engine changes with --compare.
 """
 import json, os, re, subprocess, sys, tempfile
@@ -81,10 +81,10 @@ def measure(bin_dir, tmp):
     r['auto-correct: words left wrong (sloppy)'] = float(re.search(r'auto-correct: ([\d.]+)% wrong', c3).group(1))
     best = min(float(re.search(r'avg (\d+) ns', sh([os.path.join(bin_dir, 'bench'), u, '100000', '1000000'])).group(1)) for _ in range(3))
     r['speed: ns per key'] = best
-    rules = sh(['python3', os.path.join(AS, 'rules', 'run_rules.py')], env=dict(os.environ, VIKEY_HARNESS=os.path.join(bin_dir, 'harness')))
+    rules = sh(['python3', os.path.join(AS, 'rules', 'run_rules.py')], env=dict(os.environ, AMIKEY_HARNESS=os.path.join(bin_dir, 'harness')))
     m = re.search(r'rules: (\d+)/(\d+)', rules)
     if m: r['locked edge cases passing'] = int(m.group(1))
-    rep = sh(['python3', os.path.join(AS, 'rules', 'run_reported.py')], env=dict(os.environ, VIKEY_HARNESS=os.path.join(bin_dir, 'harness')))
+    rep = sh(['python3', os.path.join(AS, 'rules', 'run_reported.py')], env=dict(os.environ, AMIKEY_HARNESS=os.path.join(bin_dir, 'harness')))
     m = re.search(r'reported bugs fixed: (\d+)/(\d+)', rep)
     if m: r['reported bugs fixed'] = f'{m.group(1)}/{m.group(2)}'; r['_reported_fixed'] = int(m.group(1))
     return r
@@ -102,7 +102,7 @@ def main():
     a = sys.argv[1:]
     ref = a[a.index('--compare') + 1] if '--compare' in a else None
     jpath = a[a.index('--json') + 1] if '--json' in a else None
-    tmp = tempfile.mkdtemp(prefix='vikey_score_')
+    tmp = tempfile.mkdtemp(prefix='amikey_score_')
     build(os.path.join(ROOT, 'Engine'), os.path.join(tmp, 'now'))
     now = measure(os.path.join(tmp, 'now'), tmp)
     old = None
@@ -125,7 +125,7 @@ def main():
             better = (v < o) if any(t in k for t in LOWER_BETTER) else (v > o)
             mark = ' ✅' if better else ' ⚠️'
         rows.append(f'| {k} | {fmt(k, o) if o != "–" else o} | {fmt(k, v)}{mark} |')
-    print('### Vikey quality scorecard\n\n' + '\n'.join(rows) + '\n\nPublic data only: chat corpus (21k words, plain and with 3% typos) and the synthetic val set (87k words). '
+    print('### amiKey quality scorecard\n\n' + '\n'.join(rows) + '\n\nPublic data only: chat corpus (21k words, plain and with 3% typos) and the synthetic val set (87k words). '
           'Realistic typing: 5 seeds on chat, 2 on synthetic. ✅ better, ⚠️ worse than the reference.')
     if jpath: json.dump({'now': now, 'ref': ref, 'ref_values': old}, open(jpath, 'w'), indent=1)
 

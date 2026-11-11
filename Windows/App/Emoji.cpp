@@ -131,7 +131,7 @@ static void loadIndex() {
             for (auto& s : {e.nameEN, e.nameVI}) if (!s.empty()) e.terms.push_back(makeTerm(s, 3));
             std::wstring kw = row.a[5].s + L" | " + row.a[6].s; size_t p = 0;
             while (p <= kw.size()) { size_t q = kw.find(L" | ", p); std::wstring k = kw.substr(p, q == std::wstring::npos ? std::wstring::npos : q - p); if (!k.empty()) e.terms.push_back(makeTerm(k, 2)); if (q == std::wstring::npos) break; p = q + 3; }
-            // emoticons (":D", "=))", "^_^") rank like names: typing one exactly puts its emoji first (Tony)
+            // emoticons (":D", "=))", "^_^") rank like names: typing one exactly puts its emoji first (maintainer)
             if (row.a.size() > 9 && row.a[9].t == JV::Str) for (auto& t : splitWords(row.a[9].s)) e.terms.push_back(makeTerm(t, 3));
             if (row.a[7].t == JV::Arr) for (auto& s : row.a[7].a) e.skins.push_back(s.s);
             e.popularity = row.a.size() > 8 ? (int)row.a[8].n : 0;
@@ -392,7 +392,7 @@ static void paint() {
     _rt->FillRectangle(D2D1::RectF(0, SEARCH_H, WIDTH, SEARCH_H + 1), _bSep);
     // grid
     float gt = SEARCH_H + 1, gb = HEIGHT - FOOTER_H - 1;
-    _rt->PushAxisAlignedClip(D2D1::RectF(0, gt + GRID_PAD, WIDTH, gb - GRID_PAD), D2D1_ANTIALIAS_MODE_ALIASED);   // the scrolling area itself is inset (Tony)
+    _rt->PushAxisAlignedClip(D2D1::RectF(0, gt + GRID_PAD, WIDTH, gb - GRID_PAD), D2D1_ANTIALIAS_MODE_ALIASED);   // the scrolling area itself is inset (maintainer)
     if (_searching() && _results.empty()) text(_vietnamese ? L"Không tìm thấy emoji nào" : L"No emoji found", _fEmpty, D2D1::RectF(0, gt + 100, WIDTH, gt + 140), _bSecondary);
     for (auto& r : _rows) {
         float y = gridTop() + r.y - _scrollY; if (y + r.h < gt || y > gb) continue;

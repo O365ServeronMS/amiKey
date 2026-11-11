@@ -61,11 +61,11 @@ for w, c in vi:
     if plain and plain[-1] in 'srx': continue
     if k and len(w) <= 7 and c >= 5 and SYL.match(k):
         vn[k] = vn.get(k, 0) + c
-# Informal Vietnamese (D27): our crawl of forums and comments (vikey-data/freq, count_informal.py). The
+# Informal Vietnamese (D27): our crawl of forums and comments (amikey-data/freq, count_informal.py). The
 # subtitles are formal; chat has particles (ạ, á), shorthand (đc, đt) and English inside. Rates are mixed
-# half and half. Without vikey-data the subtitles alone are used.
-INF = os.environ.get('VIKEY_INFORMAL', os.path.expanduser('~/Work/vikey-data/freq'))
-INF_SHARE = float(os.environ.get('VIKEY_INFORMAL_SHARE', '0.5'))
+# half and half. Without amikey-data the subtitles alone are used.
+INF = os.environ.get('AMIKEY_INFORMAL', os.path.expanduser('~/Work/amikey-data/freq'))
+INF_SHARE = float(os.environ.get('AMIKEY_INFORMAL_SHARE', '0.5'))
 SHORTHAND = re.compile('^dd[bcdghklmnpqrstvx]{0,2}$')   # đ, đc, đt, đk: no vowel, still Vietnamese
 inf = {}
 inf_total = 0
@@ -78,10 +78,10 @@ if INF_SHARE > 0 and os.path.exists(os.path.join(INF, 'vi_informal.txt')):
         if not k or (plain and plain[-1] in 'srx'): continue
         if (len(w) <= 7 and c >= 5 and SYL.match(k)) or (SHORTHAND.match(k) and c >= 50):
             inf[k] = inf.get(k, 0) + c
-# Bulk web Vietnamese (vikey-data/bulk: FineWeb-2, HPLT, MADLAD, spam-filtered; D28): like the chat crawl it can only
+# Bulk web Vietnamese (amikey-data/bulk: FineWeb-2, HPLT, MADLAD, spam-filtered; D28): like the chat crawl it can only
 # lower a subtitle word or add a new one (raising them hurt mixed typing)
-BULK = os.path.expanduser('~/Work/vikey-data/bulk/merged')
-BULK_SHARE = float(os.environ.get('VIKEY_BULK_SHARE', '0.5'))   # D28: tuned on all eval sets
+BULK = os.path.expanduser('~/Work/amikey-data/bulk/merged')
+BULK_SHARE = float(os.environ.get('AMIKEY_BULK_SHARE', '0.5'))   # D28: tuned on all eval sets
 if BULK_SHARE > 0 and os.path.exists(os.path.join(BULK, 'vi_counts.txt')):
     import json
     btot = json.load(open(os.path.join(BULK, 'sources.json')))['totals']['tokens_vi']
@@ -94,7 +94,7 @@ if BULK_SHARE > 0 and os.path.exists(os.path.join(BULK, 'vi_counts.txt')):
     # rewrite vn as counts on the subtitle scale: (1-b)*subtitle rate + b*bulk rate
     def brate(k):
         sub, mixed = vn.get(k, 0) / vi_total, (1 - BULK_SHARE) * vn.get(k, 0) / vi_total + BULK_SHARE * bulk.get(k, 0) / btot
-        return min(sub, mixed) if sub > 0 and os.environ.get('VIKEY_BULK_LOWER_ONLY', '1') == '1' else mixed
+        return min(sub, mixed) if sub > 0 and os.environ.get('AMIKEY_BULK_LOWER_ONLY', '1') == '1' else mixed
     vn = {k: brate(k) * vi_total for k in set(vn) | set(bulk)}
     vn = {k: c for k, c in vn.items() if c > 0}
 if inf_total:
@@ -106,16 +106,16 @@ if inf_total:
         sub, mixed = vn.get(k, 0) / vi_total, (1 - INF_SHARE) * vn.get(k, 0) / vi_total + INF_SHARE * inf.get(k, 0) / inf_total
         # chat can lower formal-only words (vía, mêm) and add chat words (ạ, đc), never raise a subtitle word
         # ("lít", "thí" are common in car forums, but "list", "this" are what mixed typing means)
-        return min(sub, mixed) if sub > 0 and os.environ.get('VIKEY_INFORMAL_LOWER_ONLY', '1') == '1' else mixed
+        return min(sub, mixed) if sub > 0 and os.environ.get('AMIKEY_INFORMAL_LOWER_ONLY', '1') == '1' else mixed
     vn = {k: max(-120, min(120, round(10 * math.log10(rate(k) * 1e6)))) for k in keys if vn.get(k, 0) + inf.get(k, 0) > 0}
 else:
     vn = {k: score(c, vi_total) for k, c in vn.items()}
-# Not Vietnamese words, only names and loan spellings (Sê San, sê-ri) that collide with common English (Tony: D40)
+# Not Vietnamese words, only names and loan spellings (Sê San, sê-ri) that collide with common English (maintainer: D40)
 for k in ('see',):
     vn.pop(k, None)
 
 en_rows, en_total = load('en_50k.txt')
-# Acronyms typed lowercase that are Vietnamese words in Telex: 'os' is ó (Tony: D48). 0 = Vietnamese wins in a
+# Acronyms typed lowercase that are Vietnamese words in Telex: 'os' is ó (maintainer: D48). 0 = Vietnamese wins in a
 # Vietnamese sentence, English wins in an English one.
 EN_OVERRIDE = {'os': 0, 'docs': 20}   # docs: D58
 # Keep only words the macOS English spell checker accepts (drops subtitle junk like "ys", "af", "carm").
@@ -131,14 +131,14 @@ for w in ('aj', 'ej', 'oj', 'ix'):
     en.pop(w, None)
 
 # English inside Vietnamese text (visa, meme, deadline): at least as common as there (D27)
-if inf_total and os.environ.get('VIKEY_EN_IN_VI', '1') == '1':
+if inf_total and os.environ.get('AMIKEY_EN_IN_VI', '1') == '1':
     for line in open(os.path.join(INF, 'en_in_vi.txt'), encoding='utf-8'):
         w, c = line.split(); c = int(c)
         if c >= 5 and w in en and vn_key(w) not in vn:
             en[w] = max(en[w], score(c, inf_total))
 
-# The same from the bulk web Vietnamese (experiment, VIKEY_BULK_EN=1)
-if os.environ.get('VIKEY_BULK_EN', '1') == '1' and os.path.exists(os.path.join(BULK, 'en_in_vi_counts.txt')):
+# The same from the bulk web Vietnamese (experiment, AMIKEY_BULK_EN=1)
+if os.environ.get('AMIKEY_BULK_EN', '1') == '1' and os.path.exists(os.path.join(BULK, 'en_in_vi_counts.txt')):
     import json
     btot = json.load(open(os.path.join(BULK, 'sources.json')))['totals']['tokens_vi']
     for line in open(os.path.join(BULK, 'en_in_vi_counts.txt'), encoding='utf-8'):

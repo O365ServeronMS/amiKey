@@ -3,13 +3,13 @@
   emojibase-data (MIT): the emoji list, order, groups, skin tones, Unicode version, English tags + GitHub shortcodes
   Unicode CLDR annotations (Unicode License): English and Vietnamese names + keywords
 Each entry: [emoji, group, version, en name, vi name, en keywords, vi keywords, [5 skin-tone variants] or 0, popularity,
-emoticons]. Emoticons: emojibase's (:D, <3) plus Vietnamese and Japanese styles in EMOTICONS (Tony: =)), :v, ^_^).
+emoticons]. Emoticons: emojibase's (:D, <3) plus Vietnamese and Japanese styles in EMOTICONS (maintainer: =)), :v, ^_^).
 Popularity (0-10) breaks ties in search: POPULAR is a hand-picked list of the most used emoji, most used first.
 Run: python3 Tools/emoji/build_emoji.py   (downloads the npm packages into a temp folder)"""
 import json, os, subprocess, tarfile, tempfile
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
-OUT = os.path.join(ROOT, "App/Resources/Emoji.json")
+OUT = os.path.join(ROOT, "Windows/App/Resources/Emoji.json")
 PKGS = {"emojibase-data": "18.0.0", "cldr-annotations-full": "49.0.0", "cldr-annotations-derived-full": "49.0.0"}
 
 def fetch(tmp):

@@ -26,7 +26,7 @@ static HWND vEmojiWindow = nullptr;
 
 namespace amikey { namespace core {
 
-/// The switch sound (Tony picked "sparkle", 2026-10-29): two tiny notes, rising into Vietnamese, falling into
+/// The switch sound (the maintainer picked "sparkle", 2026-10-29): two tiny notes, rising into Vietnamese, falling into
 /// English. The same WAVs as the Mac's .caf files, embedded in amiKey.exe (amiKey.rc).
 static void PlaySwitchSound(int language) {
     static const void* data[2] = {nullptr, nullptr};
@@ -64,7 +64,7 @@ static bool _otherInputLanguage = false;          // Japanese/Chinese IME layout
 static int _languageTemp = 0;
 static std::vector<Byte> savedSmartSwitchKeyData;
 
-// ---- Auto switch by typing (same state machine as VikeyCore.mm) --------------------------
+// ---- Auto switch by typing (same state machine as Engine/Driver) --------------------------
 static Uint32 _enKeys[MAX_BUFF];
 static int _enCount = 0;
 static bool _enValid = true;
@@ -390,7 +390,7 @@ void insertText(const std::wstring& text) {
     flushBatch();
 }
 
-// ---- Auto switch helpers (same as VikeyCore.mm) ---------------------------------------------
+// ---- Auto switch helpers (same as Engine/Driver) ---------------------------------------------
 static bool IsWhitespaceKey(Uint16 key) { return key == KEY_SPACE || key == KEY_RETURN || key == KEY_ENTER || key == KEY_TAB; }
 static bool IsWordStartKey(Uint16 key, bool shift) { return IsWhitespaceKey(key) || (key == KEY_9 && shift) || key == KEY_LEFT_BRACKET || key == KEY_QUOTE; }
 static bool IsLetterKey(Uint16 key) { for (Uint16 k : {KEY_A,KEY_B,KEY_C,KEY_D,KEY_E,KEY_F,KEY_G,KEY_H,KEY_I,KEY_J,KEY_K,KEY_L,KEY_M,KEY_N,KEY_O,KEY_P,KEY_Q,KEY_R,KEY_S,KEY_T,KEY_U,KEY_V,KEY_W,KEY_X,KEY_Y,KEY_Z}) if (k == key) return true; return false; }

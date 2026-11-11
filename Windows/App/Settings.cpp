@@ -72,11 +72,11 @@ static int textWidth(HDC dc, HFONT f, const std::wstring& s) { SelectObject(dc, 
 static int textHeight(HFONT f, const std::wstring& s, int width) {   // wrapped height
     HDC dc = GetDC(nullptr); SelectObject(dc, f); RECT r = {0, 0, width, 0}; DrawTextW(dc, s.c_str(), -1, &r, DT_CALCRECT | DT_WORDBREAK | DT_NOPREFIX); ReleaseDC(nullptr, dc); return r.bottom;
 }
-/// "Vi" in the text colour, "key" in brand indigo, bold (Brand.swift Wordmark).
+/// "ami" in the text colour, "Key" in brand indigo, bold (Brand.swift Wordmark).
 static void drawWordmark(HDC dc, HFONT f, int x, int y) {
     SelectObject(dc, f); SetBkMode(dc, TRANSPARENT);
-    SetTextColor(dc, TEXT); TextOutW(dc, x, y, L"Vi", 2);
-    SetTextColor(dc, BRAND); TextOutW(dc, x + textWidth(dc, f, L"Vi"), y, L"key", 3);
+    SetTextColor(dc, TEXT); TextOutW(dc, x, y, L"ami", 3);
+    SetTextColor(dc, BRAND); TextOutW(dc, x + textWidth(dc, f, L"ami"), y, L"Key", 3);
 }
 /// Text that may hold emoji: DirectWrite draws colour glyphs (GDI draws them black and white).
 static void colorText(HDC dc, const std::wstring& s, RECT r, float px, COLORREF c) {
@@ -456,7 +456,7 @@ void showSettings(HINSTANCE inst, bool firstRun) {
     if (!reg) { WNDCLASSW wc = {}; wc.lpfnWndProc = mainProc; wc.hInstance = inst; wc.lpszClassName = L"amiKeyMain"; wc.hbrBackground = nullptr; wc.hCursor = LoadCursor(nullptr, IDC_ARROW); wc.hIcon = LoadIconW(inst, MAKEINTRESOURCEW(IDI_APP)); RegisterClassW(&wc); reg = true; }
     _win = CreateWindowExW(0, L"amiKeyMain", L"amiKey", WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_CLIPCHILDREN, 0, 0, W, 600, nullptr, nullptr, inst, nullptr);
     buildMain();
-    centerOnMouseScreen(_win);   // Tony: open in the middle of the screen (Mac 1.0.16/1.0.18)
+    centerOnMouseScreen(_win);   // maintainer: open in the middle of the screen (Mac 1.0.16/1.0.18)
     bringToFront(_win);
 }
 
@@ -502,7 +502,7 @@ static void buildOnboarding() {
         break; }
     case S_PRACTICE: {
         _oy[0] = y; y += 28 + 12;
-        _oy[1] = y; y += 2 * 20 + 12;   // both texts take two lines: switching VI/EN must not move the fields (Tony)
+        _oy[1] = y; y += 2 * 20 + 12;   // both texts take two lines: switching VI/EN must not move the fields (maintainer)
         for (int i = 0; i < 3; i++) {
             _oy[2 + i] = y;
             HWND e = makeChild(_onbWin, L"EDIT", L"", WS_BORDER | WS_TABSTOP | ES_AUTOHSCROLL, OP, y + 22, OCW - 34, 28, O_EDIT + i, fBody);

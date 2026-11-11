@@ -1,6 +1,6 @@
 //
 //  SmartSwitchKey.h
-//  Vikey (based on OpenKey)
+//  amiKey (based on Vikey and OpenKey)
 //
 //  Created by Tuyen on 8/13/19.
 //  Copyright © 2019 Tuyen Mai. All rights reserved.

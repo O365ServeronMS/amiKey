@@ -1,6 +1,6 @@
 //
 //  TouchModel.cpp
-//  Vikey
+//  amiKey (from Vikey by Tony Dinh)
 //
 
 #include "TouchModel.h"

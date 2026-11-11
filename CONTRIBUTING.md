@@ -1,6 +1,6 @@
-# Contributing to Vikey
+# Contributing to amiKey
 
-Thanks for helping. Bug fixes, new features and new platforms are all welcome.
+Thanks for helping. Bug fixes and new features are welcome.
 
 ## AI-written code is welcome
 
@@ -22,18 +22,15 @@ understand the change and have tested it yourself, the same as code you typed by
 
 | Area | Add cases to | Run |
 |---|---|---|
-| Typing rules (Telex, auto switch, spelling) | `Tools/autoswitch/rules/rules.tsv`, and a decision in `DECISIONS.md` for a new rule | `Tools/autoswitch/check.sh` |
-| iOS keyboard | `iOS/Tests/` | `cd iOS && xcodegen generate && xcodebuild test -project VikeyiOS.xcodeproj -scheme Vikey -destination 'platform=iOS Simulator,name=iPhone 17'` |
-| Android keyboard | `Android/Tests/` | see `Android/README.md` |
-| Linux | `Linux/Tests/` | `bash Linux/check.sh` |
-| Windows | `Windows/Tests/` | `pwsh Windows/check.ps1` |
+| Typing rules (Telex, auto switch, spelling) | `Tools/autoswitch/rules/rules.tsv`, and a decision in `DECISIONS.md` for a new rule | `pwsh Windows/check.ps1` |
+| Windows app | `Windows/Tests/cases.tsv` (live test) | `Windows/Tests/run_livetest.cmd` with amiKey running |
 
-`check.sh` locks the engine's behavior with golden snapshots. If your change is meant to change typing results,
-review the diffs it prints, then run `Tools/autoswitch/rules/golden.py update` and say in the pull request which
-results changed and why.
+`check.ps1` locks the engine's behavior with golden snapshots. If your change is meant to change typing results,
+review the diffs it prints, then run `pwsh Windows/check.ps1 update` and say in the pull request which results
+changed and why.
 
 ## Before you open the pull request
 
 - The tests for the parts you touched pass on your machine (CI runs them too).
 - No secrets, keys or personal data in the code or the screenshots.
-- Vikey is GPL-3.0. By contributing, you agree your code is released under the same license.
+- amiKey is GPL-3.0. By contributing, you agree your code is released under the same license.

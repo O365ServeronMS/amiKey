@@ -1,19 +1,19 @@
-# Vikey decisions log
+# amiKey decisions log
 
-Product decisions for Vikey (tonyminibot/Vikey, based on OpenKey by Tuyen Mai), written as user stories.
+Product decisions for amiKey, written as user stories. amiKey is a modified version of Vikey by Tony Dinh, which is based on OpenKey by Tuyen Mai; most decisions below were made while the code was built for macOS, Windows, Linux, iOS and Android. amiKey now ships for Windows only, so the other platforms' sections are kept as history.
 Each entry records what was asked, what was decided, and its status. Newest first.
 
-Status values: **Shipped** (in a build Tony has), **Agreed** (decided, not built yet), **Rejected**.
+Status values: **Shipped** (in a released build), **Agreed** (decided, not built yet), **Rejected**.
 
 ## 60. English word forms the list is missing: "resets" stays "resets"
 
-**Status:** Built 2026-11-08, not in a release yet (Tony's report).
+**Status:** Built 2026-11-08, not in a release yet (the maintainer's report).
 
 **Problem.** On the Mac, "this get resets " gave "this get rêts ". The English list comes from subtitles: it has "reset" but not "resets". So in English mode the keys weren't English, and their Telex replay "rêts" has the same lookup key as the real word "rết" (the trailing s reads as the sắc tone), so the word was converted. In Vietnamese mode the doubled s gave "reets" (D19: the dictionary decides at the end, and "resets" wasn't in it).
 
 **Fix.** Real English word forms come from SCOWL, the database behind the standard en_US spell-check dictionaries: its en_US Hunspell dictionary, with every word expanded by its own affix rules (plurals, past tense, -ing, irregular forms). `Tools/autoswitch/build_forms.py` keeps the forms of entries whose base word is in our list and that the list is missing (18,197, ~180 KB): "resets", "quests", "resizes". `Engine/EnglishFormsData.h` holds them; the engine counts them as English, rarer than every listed word, and never when the letters are a Vietnamese word ("phis", Greek letters, is phí). Words already in the list keep their own score.
 
-Tony rejected a first version that guessed from suffixes (any listed word + -s, -es, -ed, -ing): English doesn't work that way. Also tried: every word SCOWL knows (48,102, not only forms of listed words). Worse: "nos", "cos", "sex" stopped converting to nó, có, sẽ; manual switches 58 → 60 (chat).
+The maintainer rejected a first version that guessed from suffixes (any listed word + -s, -es, -ed, -ing): English doesn't work that way. Also tried: every word SCOWL knows (48,102, not only forms of listed words). Worse: "nos", "cos", "sex" stopped converting to nó, có, sẽ; manual switches 58 → 60 (chat).
 
 **Result.** Rules D60 (8 cases), reported bug R21. All other rules, reported bugs and the Telex lock unchanged. Golden: "reie" → "resize" (chat, both sets), "quets" → "quests" (synthetic). Manual switches 58 → 57 (chat), 71 → 70 (chat_typos), 111 → 110 (synthetic); wrong words unchanged.
 
@@ -21,7 +21,7 @@ Tony rejected a first version that guessed from suffixes (any listed word + -s, 
 
 ## 59. ":" and ";" after a space stay where they are (phone keyboards)
 
-**Status:** Shipped 2026-11-02 (Tony changed his mind on the earlier behavior).
+**Status:** Shipped 2026-11-02 (the maintainer changed their mind on the earlier behavior).
 
 **Problem.** On iPhone and Android, punctuation typed right after a space went back onto the word, like the system keyboard: "Hello : " gave "Hello: ", and the emoticon "haha :)" gave "haha:)".
 
@@ -31,7 +31,7 @@ Tony rejected a first version that guessed from suffixes (any listed word + -s, 
 
 ## 58. "docs" in Vietnamese mode is English
 
-**Status:** Shipped 2026-11-02 (bug from an X user, via Tony).
+**Status:** Shipped 2026-11-02 (bug from an X user, via the maintainer).
 
 **Problem.** In Vietnamese mode "docs" gave "dóc": the subtitle corpus has "docs" at English score -1, below "dóc" (1).
 
@@ -53,7 +53,7 @@ Tony rejected a first version that guessed from suffixes (any listed word + -s, 
 
 **Status:** Agreed (2026-10-31), asked in #28.
 
-**Problem.** In Telex, a lone `[` types ơ and `]` types ư, so typing brackets takes two presses. OpenKey had two Simple Telex styles for this, which Vikey removed when it forked.
+**Problem.** In Telex, a lone `[` types ơ and `]` types ư, so typing brackets takes two presses. OpenKey had two Simple Telex styles for this, which amiKey removed when it forked.
 
 **Decision.** A "Kiểu gõ" (typing style) setting on every platform, Telex by default:
 - **Telex:** as before. `[` gives ơ, `]` gives ư, a lone `w` gives ư.
@@ -68,7 +68,7 @@ Tony rejected a first version that guessed from suffixes (any listed word + -s, 
 
 **Status:** Agreed (2026-10-31), in PR #27.
 
-**Decision.** Vikey ships an Arch Linux package (`.pkg.tar.zst`, x64 and ARM64) next to the .deb and .rpm. CI repacks it from the .deb, so the files are the same. The download page lists Arch as supported and shows an Arch button on the Linux card.
+**Decision.** amiKey ships an Arch Linux package (`.pkg.tar.zst`, x64 and ARM64) next to the .deb and .rpm. CI repacks it from the .deb, so the files are the same. The download page lists Arch as supported and shows an Arch button on the Linux card.
 
 ---
 
@@ -102,13 +102,13 @@ If every listed change is intended, accept them with `Tools/autoswitch/check.sh 
 
 ## 53. Teencode spelling (engine, off by default)
 
-**Status:** In the engine 2026-10-31, **on by default** (Tony: "ok, on by default"); an app setting comes with the main window revamp. Rules D53 (9 cases).
+**Status:** In the engine 2026-10-31, **on by default** (the maintainer: "ok, on by default"); an app setting comes with the main window revamp. Rules D53 (9 cases).
 
-**Asked by Tony** (from a VietTelex request on X): chat spelling like "zui zẻ", "zậy", "dzô", "bíe", "thík", "gòy", "ừk" shouldn't be put back to its keys. "Be conservative"; "maybe build a dictionary of teencode".
+**Asked by the maintainer** (from a VietTelex request on X): chat spelling like "zui zẻ", "zậy", "dzô", "bíe", "thík", "gòy", "ừk" shouldn't be put back to its keys. "Be conservative"; "maybe build a dictionary of teencode".
 
 **Rules** (`vTeencode`): z / dz count as d; open rimes "ie" (bíe, mịe) and "oy" with huyền only (gòy; "oxy" stays); k after i or ư (thík, ừk; "look" stays). **Dictionary:** at the end of the word, a word that is valid only by these rules stays only if it is in `Engine/TeencodeData.h` (193 words: ViSoLex, MIT, plus forms that occur in our chat data); anything else goes back to its keys ("zero" never becomes "zẻo"). "wá" isn't possible in Telex (w is ư). "kó", "nhìu", "bít" already worked.
 
-**Ties (asked by Tony):** with the option on, dictionary words that occur in our data get a Vietnamese score from their frequency (`kTeencodeVnScores`), so the usual tie rules decide them: "zoo" alone → zô, "đi zoo đây" → đi zô đây, "the zoo" → the zoo. Unmarked z-words that are English (zoom, zone, zero, zip) get no score.
+**Ties (asked by the maintainer):** with the option on, dictionary words that occur in our data get a Vietnamese score from their frequency (`kTeencodeVnScores`), so the usual tie rules decide them: "zoo" alone → zô, "đi zoo đây" → đi zô đây, "the zoo" → the zoo. Unmarked z-words that are English (zoom, zone, zero, zip) get no score.
 
 **Measured (option on vs off).** VietTelex's 50 teencode chat lines (MIT): words right 87.7% → 94.7%, lines 28 → 40 (the rest is "wá"). Val 5M words: accuracy 99.88% both (wrong words 0.1194% → 0.1195%), manual switches 0.1569 → 0.1571 per 100; chat and synthetic corpora identical; 394 teencode words in the real data now come out as their writers typed them (zị, zậy, dzô, gòy…), 13 other words changed. Known: "Zeiss" → "Zeis" (a doubled tone key, D19).
 
@@ -155,7 +155,7 @@ If every listed change is intended, accept them with `Tools/autoswitch/check.sh 
 
 **Status:** Shipped 2026-10-30.
 
-**Problem.** In Vietnamese: "xin ", ⌥Z, "hello", ⌥Z, Backspace, "s" gave "xin heín" (Tony). The engine keeps the last words so Backspace can go back into one and keep editing it. Words typed in English mode never enter that list, so after switching back, Backspace reopened "xin" as if it were the word on the screen, and "s" edited it.
+**Problem.** In Vietnamese: "xin ", ⌥Z, "hello", ⌥Z, Backspace, "s" gave "xin heín" (maintainer report). The engine keeps the last words so Backspace can go back into one and keep editing it. Words typed in English mode never enter that list, so after switching back, Backspace reopened "xin" as if it were the word on the screen, and "s" edited it.
 
 **Fix.** `vAutoSwitchForget` (called on every switch, app change, click and reset) clears those words, except the one an auto switch just converted, which is on screen (PR #8 by Ryan-LT; it replaced a narrower first fix that only cleared them on a language change). Without a switch, going back into the last word works as before ("tooi ddi hocj ⌫ s" → "tôi đi hóc").
 
@@ -165,7 +165,7 @@ If every listed change is intended, accept them with `Tools/autoswitch/check.sh 
 
 **Status:** Shipped 2026-10-30.
 
-**Problem.** In Vietnamese mode "la với os" stayed "os" and switched to English (Tony): "os" (OS) is in the developer word list at the top English score (40), while "ó" is a common chat interjection.
+**Problem.** In Vietnamese mode "la với os" stayed "os" and switched to English (maintainer report): "os" (OS) is in the developer word list at the top English score (40), while "ó" is a common chat interjection.
 
 **Fix.** "os" gets English score 0 (build_dict.py `EN_OVERRIDE`; patched in the built data like D40). At 0, a Vietnamese sentence gives "ó" and an English one keeps "os" ("the os is", "my os is linux" in either mode). OS the acronym is typed in caps, which stays as typed. A sweep: 10 and 0 behave the same; -10 and below turn English-mode "os" into "ó".
 
@@ -173,25 +173,25 @@ If every listed change is intended, accept them with `Tools/autoswitch/check.sh 
 
 ## 46. Linux: no per-website memory, no automatic install (approved)
 
-**Status:** Approved by Tony, 2026-10-30 (Telegram 247): "This is ok and approved." Do not raise these again.
+**Status:** Approved by the maintainer, 2026-10-30 (Telegram 247): "This is ok and approved." Do not raise these again.
 
-**Per-website memory.** Linux gives an input method no way to read the browser's address bar (no accessibility hook on Wayland, nothing in IBus). Vikey for Linux remembers the language per app only. Getting it would need a browser extension; not planned.
+**Per-website memory.** Linux gives an input method no way to read the browser's address bar (no accessibility hook on Wayland, nothing in IBus). amiKey for Linux remembers the language per app only. Getting it would need a browser extension; not planned.
 
-**Automatic install of updates.** Installing silently needs root or an apt/dnf repository. Vikey for Linux checks vikey.app/release.json once a day and shows a notification with a link to the download page; the user installs the new .deb/.rpm.
+**Automatic install of updates.** Installing silently needs root or an apt/dnf repository. amiKey for Linux checks the website/release.json once a day and shows a notification with a link to the download page; the user installs the new .deb/.rpm.
 
 ---
 
 ## 45. Linux catches up with the Mac app
 
-**Asked by Tony** (2026-10-29): "Use the iOS and macOS app as the baseline. Port all the features to Windows/Linux/Android. Try to reach 100% feature parity."
+**Asked by the maintainer** (2026-10-29): "Use the iOS and macOS app as the baseline. Port all the features to Windows/Linux/Android. Try to reach 100% feature parity."
 
 **Decided**
 
-- The Linux core (`Linux/ibus/Core.cpp`) follows `VikeyCore.mm` again: undo then type on (D32), digits start a word (D33), look forward (D35); D39/D41/D42 come with the shared engine. Live cases for each in `Linux/Tests/cases-linux.tsv`.
+- The Linux core (`Linux/ibus/Core.cpp`) follows `the macOS core` again: undo then type on (D32), digits start a word (D33), look forward (D35); D39/D41/D42 come with the shared engine. Live cases for each in `Linux/Tests/cases-linux.tsv`.
 - Switch sound: the Mac's two notes (`.caf` → `.wav`), played inside the engine with GStreamer, not the system bell.
-- Emoji picker: `vikey-settings --emoji`, a port of the Mac panel and its search (English, Vietnamese, Telex keys, Frequently Used, sections, arrows by row, Enter, Esc clears then closes, closes on click elsewhere). The engine opens it on the hotkey and types the choice into the app through the command file.
-- Guide (first run, menu "Hướng dẫn…"): the Mac's steps and copy; the Accessibility step becomes "add Vikey to the input sources", checked live on GNOME.
-- Menu "Kiểm tra cập nhật…" and a real "Tự động cập nhật" switch: a daily check of vikey.app/release.json with a notification; the user installs the package (no repo yet).
+- Emoji picker: `amikey-settings --emoji`, a port of the Mac panel and its search (English, Vietnamese, Telex keys, Frequently Used, sections, arrows by row, Enter, Esc clears then closes, closes on click elsewhere). The engine opens it on the hotkey and types the choice into the app through the command file.
+- Guide (first run, menu "Hướng dẫn…"): the Mac's steps and copy; the Accessibility step becomes "add amiKey to the input sources", checked live on GNOME.
+- Menu "Kiểm tra cập nhật…" and a real "Tự động cập nhật" switch: a daily check of the website/release.json with a notification; the user installs the package (no repo yet).
 - "Ghi nhận" in About (the Mac list without Sparkle). Every row name and tip re-checked against MainView.swift.
 - Not matched: per-website memory (needs a browser extension), positioning the picker as a pure Wayland client (it runs on XWayland), installing updates by itself (`Linux/PLAN.md`).
 
@@ -200,33 +200,33 @@ If every listed change is intended, accept them with `Tools/autoswitch/check.sh 
 
 **Status:** Built 2026-10-30 on branch `windows`, not in a release yet.
 
-**Asked by Tony.** "Use the iOS and macOS app as the baseline. Port all the features to Windows/Linux/Android. Try to reach 100% feature parity."
+**Asked by the maintainer.** "Use the iOS and macOS app as the baseline. Port all the features to Windows/Linux/Android. Try to reach 100% feature parity."
 
 **Decided (Windows)**
 
-- The platform core (`Windows/App/Core.cpp`) has every VikeyCore.mm change since 1.0.14: Backspace undo then typing on (D32), digits start a word (D33), look forward (D35), the emoji hotkey, and the "sparkle" switch sound (the Mac's two .caf files as WAV resources). D39, D41 and D42 come with the shared engine. Live test: 23 cases (9 new, one per rule), all pass in the ARM64 VM.
+- The platform core (`Windows/App/Core.cpp`) has every the macOS core change since 1.0.14: Backspace undo then typing on (D32), digits start a word (D33), look forward (D35), the emoji hotkey, and the "sparkle" switch sound (the Mac's two .caf files as WAV resources). D39, D41 and D42 come with the shared engine. Live test: 23 cases (9 new, one per rule), all pass in the ARM64 VM.
 - Emoji picker: same search (English, Vietnamese, Telex keys, emoticons), same layout (Frequently Used first, sections, 9 columns), same keys. A popup that never takes the focus; the keyboard hook hands it the keys, so the app in front keeps its caret. Drawn with Direct2D/DirectWrite: GDI+ can't draw colour emoji. Country flags are left out: Windows' emoji font draws them as two letters.
-- Onboarding: the Mac's steps minus Accessibility (welcome with the Telex table, practice, hotkey + sound, emoji). Tray menu and About match the Mac (Hướng dẫn…, Gửi góp ý…, vikey.app · GitHub · Ghi nhận); Ghi nhận opens an Acknowledgements window (TweetNaCl and Inno Setup instead of Sparkle).
+- Onboarding: the Mac's steps minus Accessibility (welcome with the Telex table, practice, hotkey + sound, emoji). Tray menu and About match the Mac (Hướng dẫn…, Gửi góp ý…, the website · GitHub · Ghi nhận); Ghi nhận opens an Acknowledgements window (TweetNaCl and Inno Setup instead of Sparkle).
 - Windows open in the middle of the screen with the mouse. Settings rows are 34 px so the window, with the emoji rows, fits a 1366×768 screen.
-- No UI Automation polling while a Vikey window is in front: it stalled Vikey's UI thread for seconds.
+- No UI Automation polling while a amiKey window is in front: it stalled amiKey's UI thread for seconds.
 
 **Details:** `Windows/PLAN.md`.
 
 ---
-## 43. Vikey for Android
+## 43. amiKey for Android
 
-**Status:** Built 2026-10-29 on branch `android` (release build signed, live test 14/14 on the emulator). Publishing waits for a try on Tony's phone.
+**Status:** Built 2026-10-29 on branch `android` (release build signed, live test 14/14 on the emulator). Publishing waits for a try on the maintainer's phone.
 
-**User story.** As a Vikey user on Android, I want the same keyboard as on iPhone: Telex, auto switch, suggestions, auto-correct, emoji, in the same layout and with the same settings.
+**User story.** As a amiKey user on Android, I want the same keyboard as on iPhone: Telex, auto switch, suggestions, auto-correct, emoji, in the same layout and with the same settings.
 
 **Decisions**
 
 - An `InputMethodService` with one Canvas-drawn keyboard view, not Compose: touches are handled by the view itself so fast two-thumb typing never loses a key, the same reason the iOS keyboard handles touches in one `UIView`.
-- Same engine, same driver: `Engine/` is built with the NDK; `vikey_jni.cpp` is the Android twin of `VKDriver.mm`, and the IME logic is a port of `KeyboardViewController.swift` (text context kept locally; one `getTextBeforeCursor` only when the app reports an outside change).
+- Same engine, same driver: `Engine/` is built with the NDK; `amikey_jni.cpp` is the Android twin of `VKDriver.mm`, and the IME logic is a port of `KeyboardViewController.swift` (text context kept locally; one `getTextBeforeCursor` only when the app reports an outside change).
 - The keyboard owns its background and keeps the keys above the gesture bar (Android 15 edge-to-edge).
-- Haptics don't need a permission on Android, so "Rung khi gõ" is on without the Full Access step; the onboarding's step 4 is "switch to Vikey" instead.
+- Haptics don't need a permission on Android, so "Rung khi gõ" is on without the Full Access step; the onboarding's step 4 is "switch to amiKey" instead.
 - Emoji: the device's font decides what is shown (`Paint.hasGlyph`) instead of an OS-version table.
-- Distribution: a signed APK on the GitHub release + vikey.app first (the download page already has the Android card); Google Play once the company account exists (D-U-N-S found, signup in progress, [[google-play-console]]).
+- Distribution: a signed APK on the GitHub release + the website first (the download page already has the Android card); Google Play once the company account exists (D-U-N-S found, signup in progress, [[google-play-console]]).
 - Minimum Android 8.0 (API 26); arm64 + x86_64 (emulator) only.
 
 **Details:** `Android/PLAN.md`.
@@ -236,7 +236,7 @@ If every listed change is intended, accept them with `Tools/autoswitch/check.sh 
 
 **Status:** Shipped 2026-10-29.
 
-**Problem.** "e liên hệ bên ASL" came out "e liên hệ been ASL" (Tony). ASL in Telex is "ÁL", invalid, so its keys go back and the mode switches to English; look-back then flips the tie before it (bên 29 vs been 32) to "been". Same with "team bên US".
+**Problem.** "e liên hệ bên ASL" came out "e liên hệ been ASL" (maintainer report). ASL in Telex is "ÁL", invalid, so its keys go back and the mode switches to English; look-back then flips the tie before it (bên 29 vs been 32) to "been". Same with "team bên US".
 
 **Fix.** When the word put back has 2+ capitals, look-back stays off. The acronym itself is still put back as typed. Vietnamese text is full of acronyms, so they say nothing about the words before them.
 
@@ -246,7 +246,7 @@ If every listed change is intended, accept them with `Tools/autoswitch/check.sh 
 
 **Status:** Shipped 2026-10-29.
 
-**Problem.** In English mode, THOONG, THUOWNGF, VIEETJ stayed as typed (Tony). D23 converts all-caps words only inside a run of capitals, so a lone HW or CWS stays an acronym. The first word of a Caps Lock run never converted either ("TOOI DDI HOCJ" gave "TOOI ĐI HỌC").
+**Problem.** In English mode, THOONG, THUOWNGF, VIEETJ stayed as typed (maintainer report). D23 converts all-caps words only inside a run of capitals, so a lone HW or CWS stays an acronym. The first word of a Caps Lock run never converted either ("TOOI DDI HOCJ" gave "TOOI ĐI HỌC").
 
 **Fix.** A lone all-caps word of 4+ letters converts when its keys carry a Telex mark: a doubled a/e/o/d, or w after a/o/u. The D23 floor (a common syllable, no English reading) still applies. Acronyms rarely have these marks: HW, IRS, USA, NASA stay.
 
@@ -256,13 +256,13 @@ If every listed change is intended, accept them with `Tools/autoswitch/check.sh 
 
 **Status:** Shipped 2026-10-29.
 
-**Problem.** In Vietnamese mode "see you" came out as "sê you" (Tony). The Vietnamese word list had "sê" at 11 (from names and loan spellings: Sê San, sê-ri), and "you" also counts as Vietnamese text in web data, so nothing switched to English.
+**Problem.** In Vietnamese mode "see you" came out as "sê you" (maintainer report). The Vietnamese word list had "sê" at 11 (from names and loan spellings: Sê San, sê-ri), and "you" also counts as Vietnamese text in web data, so nothing switched to English.
 
 **Fix.** "sê" drops to the lowest score (-120) in the built data; build_dict.py drops it on the next rebuild. A full rebuild today would change hundreds of other words (the source data moved since the last build), so only this word changed.
 
 **Result.** Locked test 0.117% → 0.116% wrong words (99.88%); chat sets one manual switch fewer each. Rule D40.
 
-**Also checked (Tony's report).** "we" → "ưe" happens only inside the 5 seconds after a manual switch, when auto-switch is paused on purpose. "ở DDaf" was the D39 bug (Shift held for both Ds).
+**Also checked (the maintainer's report).** "we" → "ưe" happens only inside the 5 seconds after a manual switch, when auto-switch is paused on purpose. "ở DDaf" was the D39 bug (Shift held for both Ds).
 
 ## 39. DD counts as one capital (Đ)
 
@@ -274,17 +274,17 @@ If every listed change is intended, accept them with `Tools/autoswitch/check.sh 
 
 **Result.** Locked test unchanged: 99.88%, caps group 1.75%. Rules: D39 (2 cases).
 
-## 38. Vikey for Linux
+## 38. amiKey for Linux
 
 **Status:** Shipped 2026-10-29 as part of 1.0.14 (branch `linux` → main), Phases 0–6 of `Linux/PLAN.md`.
 
-**User story.** As a Linux user, I want the same Vikey as on the Mac: same engine, same auto switch, same settings window.
+**User story.** As a Linux user, I want the same amiKey as on the Mac: same engine, same auto switch, same settings window.
 
 **Decided**
 
-- Vikey is an **IBus engine** (`ibus-engine-vikey`): the only way to type in every app on X11 and Wayland. No pre-edit; text is committed straight, as on Mac/Windows.
+- amiKey is an **IBus engine** (`ibus-engine-amikey`): the only way to type in every app on X11 and Wayland. No pre-edit; text is committed straight, as on Mac/Windows.
 - Same engine, same rule lock on Linux CI (x64 + ARM64). The platform core (`Linux/ibus/Core.cpp`) is the Windows/macOS state machine with an output sink.
-- `vikey-settings` (GTK4 + libadwaita) mirrors the Mac window row by row; the IBus panel menu mirrors the menu bar. Settings in `~/.config/vikey/settings.json`; the engine watches it. Language switches go through a one-shot command file.
+- `amikey-settings` (GTK4 + libadwaita) mirrors the Mac window row by row; the IBus panel menu mirrors the menu bar. Settings in `~/.config/amikey/settings.json`; the engine watches it. Language switches go through a one-shot command file.
 - Per-app memory from the X11 focus window (XWayland apps only under Wayland). Per-website memory is not available (would need a browser extension). Auto update is left to the package manager (apt/dnf repo later).
 - Packages: .deb (Ubuntu/Debian) and .rpm (Fedora) from CPack, x64 + ARM64, published with `release.sh --linux`.
 
@@ -294,17 +294,17 @@ If every listed change is intended, accept them with `Tools/autoswitch/check.sh 
 
 ## 37. Capitalised names mid-sentence: tried, not shipped
 
-**Asked by Tony.** "do #2 too" (Max/Mã, Los Angeles, Bar, Docs).
+**Asked by the maintainer.** "do #2 too" (Max/Mã, Los Angeles, Bar, Docs).
 
 **Tried.** For a capitalised word in the middle of a sentence that has both readings, decide by how often each capitalised form appears mid-sentence in real Vietnamese text (93M web words + crawl: Bar 564 vs Bả 27, Los 766 vs Ló 3, but Mã 3457 vs Max 1239, Lê 13245 vs Lee 1625). Tuning set: 0.121% either way (social -0.01, tech +0.01; 32 words fixed, 14 broken out of 5M). The remaining capital errors are specific names in specific texts (a story character "Max"): no general count settles them.
 
 **Decided.** Not shipped. Engine support stays, off unless counts are loaded (`vAutoSwitchSetCapitalised`, `SIM_CAP`).
 
-## 36. Vikey for Windows
+## 36. amiKey for Windows
 
 **Status:** Agreed 2026-10-29, built on branch `windows` (Phases 0–5 of `Windows/PLAN.md` done); ships after the code-signing certificate arrives.
 
-**User story.** As a Windows user, I want the same Vikey as on the Mac: same engine, same auto switch, same settings window, same words.
+**User story.** As a Windows user, I want the same amiKey as on the Mac: same engine, same auto switch, same settings window, same words.
 
 **Decided**
 
@@ -312,7 +312,7 @@ If every listed change is intended, accept them with `Tools/autoswitch/check.sh 
 - UI 1:1 with the Mac app (window, tray menu, onboarding, About, typing log), native Win32 + GDI+, no framework. Hotkey default Alt+Z.
 - Per-site memory reads the address bar through UI Automation (Chrome, Edge, Brave, Vivaldi, Opera, Firefox).
 - Per-user install (no admin prompt), Inno Setup, plus a portable zip. Auto update through the Mac appcast with Windows items, signed with the same EdDSA key.
-- Code signing with a Certum Open Source Code Signing certificate in Tony's name (individuals only); unsigned builds are not published.
+- Code signing with a Certum Open Source Code Signing certificate in the maintainer's name (individuals only); unsigned builds are not published.
 - Versions follow `project.yml` MARKETING_VERSION, released with `Tools/release/release.sh --windows <ver>` after the Mac release.
 
 **Verified.** 14 live typing cases pass in a Windows 11 VM on ARM64 and on the x64 build under emulation; update from a local appcast installs and relaunches.
@@ -320,7 +320,7 @@ If every listed change is intended, accept them with `Tools/autoswitch/check.sh 
 ---
 ## 35. Look forward: the next word can flip a word put back to English
 
-**Asked by Tony.** "go" on fix #1 for the top tie errors (Vietnamese words right after English stayed English: "em í ạ", "office ít nhất", "lát nữa").
+**Asked by the maintainer.** "go" on fix #1 for the top tie errors (Vietnamese words right after English stayed English: "em í ạ", "office ít nhất", "lát nữa").
 
 **Decided.**
 - A word auto switch put back to English is now the previous word for the next English-mode check. When the next word turns Vietnamese, the earlier word flips back too if word pairs say it reads Vietnamese before that next word at least 100x more often ("its nhất" -> "ít nhất", "last nữa" -> "lát nữa"). Mac, iOS driver, simulator and test harness.
@@ -332,7 +332,7 @@ If every listed change is intended, accept them with `Tools/autoswitch/check.sh 
 
 ## 34. Longer context for ties: word pairs beat D22; triples not worth it
 
-**Asked by Tony.** "longer context for ties (3-word phrases)".
+**Asked by the maintainer.** "longer context for ties (3-word phrases)".
 
 **Decided.**
 - Word triples (322k Vietnamese + 262k English, from the same 180M words) tried two words back before word pairs. No gain on the tuning set at any weight (0.124% either way): the remaining tie errors are not about missing context. Not shipped (would add ~5 MB); engine support stays, off unless loaded (`vAutoSwitchSetTrigrams`).
@@ -343,7 +343,7 @@ If every listed change is intended, accept them with `Tools/autoswitch/check.sh 
 
 ## 33. Words after digits
 
-**Asked by Tony.** "Cool, do that" (numbers glued to Vietnamese words in chat: 5trăm, 100tỷ, 4tuổi, 1cái).
+**Asked by the maintainer.** "Cool, do that" (numbers glued to Vietnamese words in chat: 5trăm, 100tỷ, 4tuổi, 1cái).
 
 **Decided.**
 - Digits after a space (or at the start) begin a new word: Telex and auto-switch work on the letters after them ("mua 1casi" -> "1cái", "5trawm" -> "5trăm") in both modes. Digits glued to letters ("abc1def", "md5sum") keep the whole thing a code, as before.
@@ -354,18 +354,18 @@ If every listed change is intended, accept them with `Tools/autoswitch/check.sh 
 
 ## 32. Backspace undo, then typing on
 
-**Asked by Tony.** "bộ source vaay " -> "vây" -> Backspace -> "vaay" -> "j" + space should give "vậy".
+**Asked by the maintainer.** "bộ source vaay " -> "vây" -> Backspace -> "vaay" -> "j" + space should give "vậy".
 
 **Decided.**
 - After Backspace undoes a fix and returns to English, the restored keys are the current word again, so typing on checks the whole word ("vaayj" -> "vậy"). Finishing the same word unchanged keeps it as typed (no redo of the fix just undone). Mac, iOS driver; `driver/undo_test` in check.sh.
 - iOS driver undo now matches the Mac: Backspace takes the break key too, the cursor stays at the end of the restored word.
-- Not done (Tony: not useful): the reverse case, a Vietnamese word fixed to English, undone, then continued.
+- Not done (the maintainer: not useful): the reverse case, a Vietnamese word fixed to English, undone, then continued.
 
 **Status:** Built 2026-10-29, not in a release yet.
 
 ## 31. Website in English; brand guideline
 
-**Asked by Tony.** English version of the website (Vietnamese stays the default, easy switch, flag); a brand guideline used everywhere.
+**Asked by the maintainer.** English version of the website (Vietnamese stays the default, easy switch, flag); a brand guideline used everywhere.
 
 **Decided.**
 - English pages at /en/ (same file names in `site/pages_en/`), a VI/EN pill with the target language's flag that keeps the page, hreflang + sitemap. The release script needs both changelogs.
@@ -376,7 +376,7 @@ If every listed change is intended, accept them with `Tools/autoswitch/check.sh 
 
 ## 30. Word pairs decide ties
 
-**Asked by Tony.** "yes, try 4" (context beyond one word, for true ties like bus/bú, been/bên, mix/mĩ).
+**Asked by the maintainer.** "yes, try 4" (context beyond one word, for true ties like bus/bú, been/bên, mix/mĩ).
 
 **Decided.**
 - For a word that is a word both ways (734 ties), the engine looks up how often each reading follows the previous word in real text: Vietnamese web + forums with the English inside them (93M words), English web + Reddit (87M), our crawl (train part). Test-set sites and text excluded. Vote = 10·log10(Vietnamese pair count / English pair count), × 2, added to the frequency gap; common Vietnamese words still only switch on a strong English vote.
@@ -388,12 +388,12 @@ If every listed change is intended, accept them with `Tools/autoswitch/check.sh 
 
 ## 29. Tuning set vs locked test set, mixed across topics
 
-**Asked by Tony.** Tune against one set and keep another locked; "make sure we have a good mix in each, i don't want our engine to be tuned toward a specific topic/use-case".
+**Asked by the maintainer.** Tune against one set and keep another locked; "make sure we have a good mix in each, i don't want our engine to be tuned toward a specific topic/use-case".
 
 **Decided.**
-- Every test source is split 50/50 by message (md5 of the line, stable): `val` (tune against) and `test` (locked: only for reporting, never for choosing). 20% of our crawl leaves the counting text and is split between them. Built by `vikey-data/evalsets/build.py`; VietMix splits stay local.
+- Every test source is split 50/50 by message (md5 of the line, stable): `val` (tune against) and `test` (locked: only for reporting, never for choosing). 20% of our crawl leaves the counting text and is split between them. Built by `amikey-data/evalsets/build.py`; VietMix splits stay local.
 - Groups: social/chat (synthetic chat, ViLexNorm, ViCTSD, VietMix, news/car-forum comments), tech (Tinhte, Viblo, tech forums), news (VnExpress), mixed (synthetic everyday), Vietnamese-only, English-only. The headline is the macro average: each group counts the same, whatever its size. All-caps typing is a guardrail reported beside it.
-- `vikey-data/evalsets/run.py val` is what tuning looks at; `run.py test` only for release numbers. check.sh's ViLexNorm auto-correct lock uses the val half.
+- `amikey-data/evalsets/run.py val` is what tuning looks at; `run.py test` only for release numbers. check.sh's ViLexNorm auto-correct lock uses the val half.
 - Found and fixed a leak: the keep-list read the Tinhte test set. Web data is being filtered of test-set domains.
 - Baseline (current engine): val 99.85%, locked test 99.86% (macro, lazy typist). Groups (test): social 0.25%, tech 0.23%, news 0.08%, mixed 0.23%, Vietnamese-only 0.01%, English-only 0.03% wrong words; caps 2.70%.
 
@@ -401,21 +401,21 @@ If every listed change is intended, accept them with `Tools/autoswitch/check.sh 
 
 ## 28. Web Vietnamese data; Early Switch rejected
 
-**Asked by Tony.** "we need about 10 times data both vietnamese and english"; "Early Switch: if we detect 3 words in a row that are clearly in VN/EN, switch right away".
+**Asked by the maintainer.** "we need about 10 times data both vietnamese and english"; "Early Switch: if we detect 3 words in a row that are clearly in VN/EN, switch right away".
 
 **Decided.**
-- 93M words of spam-filtered web Vietnamese (FineWeb-2 incl. a forum/chatty slice, HPLT 2, MADLAD-400; ODC-By/CC0; `vikey-data/bulk`) mixed half and half into the Vietnamese frequencies, lower-only like the chat crawl (D27). English used inside that Vietnamese text raises those English words. Lazy wrong words vs 1.0.13: chat 0.26 → 0.25%, everyday mixed 0.23 → 0.22%, Vietnamese-only 0.05 → 0.04%, VietMix 0.69 → 0.65%, others equal; fewer manual switches.
+- 93M words of spam-filtered web Vietnamese (FineWeb-2 incl. a forum/chatty slice, HPLT 2, MADLAD-400; ODC-By/CC0; `amikey-data/bulk`) mixed half and half into the Vietnamese frequencies, lower-only like the chat crawl (D27). English used inside that Vietnamese text raises those English words. Lazy wrong words vs 1.0.13: chat 0.26 → 0.25%, everyday mixed 0.23 → 0.22%, Vietnamese-only 0.05 → 0.04%, VietMix 0.69 → 0.65%, others equal; fewer manual switches.
 - "aj", "ej", "oj", "ix" are not English words (subtitle junk): "aj" is ạ, also right after English ("esports ạ"). Contraction stems (didn, wasn…) are English.
-- **Early Switch rejected (Tony, after the numbers):** switching after 3 words that can only be one language. To-Vietnamese never fires (the first Vietnamese-only word already switches); to-English helped synthetic chat (0.23 → 0.21%) but broke real code-mixed text, where English phrases are followed by Vietnamese again ("predict stock price v ạ"): ViLexNorm 14 words broken, 0 fixed. Kept in the simulator only (`SIM_EARLY=N`).
+- **Early Switch rejected (the maintainer, after the numbers):** switching after 3 words that can only be one language. To-Vietnamese never fires (the first Vietnamese-only word already switches); to-English helped synthetic chat (0.23 → 0.21%) but broke real code-mixed text, where English phrases are followed by Vietnamese again ("predict stock price v ạ"): ViLexNorm 14 words broken, 0 fixed. Kept in the simulator only (`SIM_EARLY=N`).
 
 **Status:** Built 2026-10-29, not in a release yet.
 
 ## 27. Chat frequencies and VietMix fixes (Mac + iOS engine)
 
-**Asked by Tony.** "see if anything we can improve (which can apply to both macOS + iOS app)" after the VietMix dataset (real Vietnamese–English code-mixed posts, held out).
+**Asked by the maintainer.** "see if anything we can improve (which can apply to both macOS + iOS app)" after the VietMix dataset (real Vietnamese–English code-mixed posts, held out).
 
 **Decided.**
-- Vietnamese word frequencies now mix the subtitles with 2.5M words of our own crawl of Vietnamese forums and comments (`vikey-data/freq/count_informal.py`, `build_dict.py`). Chat can only lower a formal-only syllable (vía, mêm) or add a chat word (ạ, đc, đt); it never raises a word the subtitles have ("lít", "thí" are common in car forums, but "list", "this" are what mixed typing means: raising them broke "This is" typed in VI mode).
+- Vietnamese word frequencies now mix the subtitles with 2.5M words of our own crawl of Vietnamese forums and comments (`amikey-data/freq/count_informal.py`, `build_dict.py`). Chat can only lower a formal-only syllable (vía, mêm) or add a chat word (ạ, đc, đt); it never raises a word the subtitles have ("lít", "thí" are common in car forums, but "list", "this" are what mixed typing means: raising them broke "This is" typed in VI mode).
 - English words that Vietnamese chat uses get at least their in-chat frequency; "meme" added.
 - đ shorthand with no vowel (đ, đc, đt, đk) counts as Vietnamese.
 - Restoring a foreign word puts back the keys Telex undid on the way: "deepseek", not "deepsek" (only for 2+ vowel groups: "cuooocf" keeps the Telex undo).
@@ -440,7 +440,7 @@ If every listed change is intended, accept them with `Tools/autoswitch/check.sh 
 - Settings: "Gợi ý từ" and "Tự sửa lỗi gõ", both on by default. The strip only shows when one of them is on.
 - The strip is worked out after the key's text is sent, so it never delays typing.
 
-- Tested on real data (vikey-data/public, private): finger scatter calibrated on 60k real taps (Google TSI, Aalto): ~1.8 mm, i.e. 0.30 key width × 0.20 key height on iPhone; the model uses σ 0.35 × 0.25.
+- Tested on real data (amikey-data/public, private): finger scatter calibrated on 60k real taps (Google TSI, Aalto): ~1.8 mm, i.e. 0.30 key width × 0.20 key height on iPhone; the model uses σ 0.35 × 0.25.
 - A keep-list of 16k words people really type (shorthand, teencode, slang, brands: ntn, cta, xog…), from 2.65M words of crawled Vietnamese forums/comments (`Engine/KeepWords.inc`, `Tools/autoswitch/keep/gen_inc.py`). Real social comments (ViLexNorm, held out): right words broken 0.17% → 0.06%.
 - A long non-word gets a rarer fix (floor −4 for 6+ letters): real English typos (GitHub Typo Corpus) fixed 15% → 33% ("occured", "funtion", "defualt").
 
@@ -452,7 +452,7 @@ If every listed change is intended, accept them with `Tools/autoswitch/check.sh 
 
 **Status:** Built 2026-10-28, not shipped yet. Locked in `check.sh` (touchsim) and iOS tests.
 
-**Asked by Tony.** "Fat finger detection: give each key a bigger region depending on the current typed word. Probably a small neural network?"
+**Asked by the maintainer.** "Fat finger detection: give each key a bigger region depending on the current typed word. Probably a small neural network?"
 
 **Decided.**
 - No neural network for now: a statistical model is tiny, fast and testable. `Engine/TouchModel` scores each key near the touch by (2D Gaussian distance, σ = 0.35 key) + 0.5 × log P(key | letters of the word so far). The prior comes from the dictionaries (sorted lists, so every next letter's mass is two binary searches), mixed 80% current mode / 20% the other language, tuned on mixed text. A touch inside the central 80% of a key always types that key (retuned so careful typists lose nothing).
@@ -463,7 +463,7 @@ If every listed change is intended, accept them with `Tools/autoswitch/check.sh 
 
 **Status:** Done 2026-10-28.
 
-**Asked by Tony.** The first iOS builds felt laggy. "We should have tests guarantee performance in case we do something that make it slow in the future."
+**Asked by the maintainer.** The first iOS builds felt laggy. "We should have tests guarantee performance in case we do something that make it slow in the future."
 
 **Decided.**
 - `check.sh` (and CI) types the chat corpus through Engine/Driver and fails when a key takes more than 1 µs on average or 20 µs at the 99.9th percentile. Today: ~155 ns average, ~1.8 µs p99.9, so slower CI machines still pass.
@@ -474,7 +474,7 @@ If every listed change is intended, accept them with `Tools/autoswitch/check.sh 
 
 **Status:** Done 2026-10-28 (1.0.12). Rule cases D23.
 
-**Asked by Tony.** "Check and see if there is any easy win we can do to improve metrics." Found by ranking the wrong words on the new 1.8M-word test data (vikey-data).
+**Asked by the maintainer.** "Check and see if there is any easy win we can do to improve metrics." Found by ranking the wrong words on the new 1.8M-word test data (amikey-data).
 
 **Decided.**
 - VN mode: a word with 2+ capitals that Telex turned into a rare (under ~3 per million) or invalid syllable is an acronym or a name: keys put back and English (NÁ → NAS, HĐ → HDD, ỐM → OSMO). Vietnamese acronyms where only đ changed stay (VĐV, HĐND, BĐS). A doubled tone key in a capitalized word keeps both presses (ASUS, not AUS).
@@ -486,9 +486,9 @@ If every listed change is intended, accept them with `Tools/autoswitch/check.sh 
 
 ## 22. Ties: frequency ratio decides, a clearly English neighbor guards
 
-**Status:** Done 2026-10-28 (1.0.11). Rule cases D22. Tony picked option A.
+**Status:** Done 2026-10-28 (1.0.11). Rule cases D22. The maintainer picked option A.
 
-**Asked by Tony.** Ties (keys that are a real word in both languages) caused most manual switches. Use look-behind/look-forward and the frequency ratio; which works better? Run scenarios.
+**Asked by the maintainer.** Ties (keys that are a real word in both languages) caused most manual switches. Use look-behind/look-forward and the frequency ratio; which works better? Run scenarios.
 
 **Measured** (simulator, manual switches for a switch-by-hand typist / wrong words for a lazy one):
 
@@ -512,17 +512,17 @@ Neighbors as the main signal made things worse (mixed text puts English nouns ne
 
 **Status:** Done 2026-10-28 (1.0.9).
 
-**Asked by Tony.** "When a manual switch is triggered, disable auto switch for 15 seconds, this should be an option, enabled by default."
+**Asked by the maintainer.** "When a manual switch is triggered, disable auto switch for 15 seconds, this should be an option, enabled by default."
 
 **Decided.**
-- A switch by hand (hotkey, menu bar, main window) turns auto switch off for 5 s (first 15 s; Tony: "make it 5s", 1.0.10); another manual switch restarts it. Afterwards the word being typed is skipped and checking starts with the next word.
+- A switch by hand (hotkey, menu bar, main window) turns auto switch off for 5 s (first 15 s; the maintainer: "make it 5s", 1.0.10); another manual switch restarts it. Afterwards the word being typed is skipped and checking starts with the next word.
 - Option "Tạm dừng 5 giây sau khi chuyển tay", on by default (`PauseAutoAfterManual`). App-level only: engine rules and their tests are unchanged.
 
 ## 20. Words after ( and ", and no Backspace undo for multi-word fixes
 
 **Status:** Done 2026-10-28 (1.0.8). Rule cases D20.
 
-**Asked by Tony.**
+**Asked by the maintainer.**
 - "(thí create " didn't change "thí" into "this".
 - "thí create " became "this create ", then Backspace (to add an s) turned it back into "thí". "Maybe we shouldn't do the backspace to undo thing when there are more than 1 word involved?"
 
@@ -534,7 +534,7 @@ Neighbors as the main signal made things worse (mixed text puts English nouns ne
 
 **Status:** Done 2026-10-28 (1.0.7). Rule cases D19. Replaces D8's "keep both letters" default.
 
-**Asked by Tony.** "v e r r" showed "vẻ" then "verr". "Make it show 'ver' by default and only show 'verr' if it's a valid English word... the majority of people would have muscle memory from previous apps."
+**Asked by the maintainer.** "v e r r" showed "vẻ" then "verr". "Make it show 'ver' by default and only show 'verr' if it's a valid English word... the majority of people would have muscle memory from previous apps."
 
 **Decided.**
 - Pressing the same tone key again still switches to English. On screen: the Telex result ("ver"), unless the keys with both presses are already an English word ("err", "boss", "less").
@@ -545,7 +545,7 @@ Neighbors as the main signal made things worse (mixed text puts English nouns ne
 
 **Status:** Done 2026-10-28 (1.0.5). Rule cases D18.
 
-**Asked by Tony.** In VN mode "let's mix" gave "mĩ" (a tie: mĩ is Vietnamese). Pressing x again by muscle memory gave "mixx". Tony picked option A.
+**Asked by the maintainer.** In VN mode "let's mix" gave "mĩ" (a tie: mĩ is Vietnamese). Pressing x again by muscle memory gave "mixx". The maintainer picked option A.
 
 **Decided.**
 - After a doubled tone key switches to English, the end of that word decides: if the word with both presses is not English but the word with one press is, the extra press goes ("mixx" → "mix", "mixxer" → "mixer"). When both presses make a word they stay (err, boss, tomorrow). Words still being typed are never touched. Backspace right after puts "mixx" back.
@@ -557,22 +557,22 @@ Neighbors as the main signal made things worse (mixed text puts English nouns ne
 
 **Status:** Done 2026-10-28 (1.0.5). Rule cases D17.
 
-**Found while counting tie cases for Tony's "let's mĩ" report.**
+**Found while counting tie cases for the maintainer's "let's mĩ" report.**
 - A doubled tone key that switches to English now puts back the whole word as typed. Before, only the tone was undone: "tômrrow", "surprrise", "êpss". Now: tomorrow, surprise, express. "err" still keeps both letters (D8).
 - A w-vowel (ư) that Telex turns back into u is written as a letter. Before, an empty character was sent and the text vanished ("were" + n).
 - A word that has no marks left but where Telex ate a key is put back if the typed keys are English. This only helps when the engine still has every key; the "eee" undo drops one ("seemed" → "semed"), which is still open.
 
-**Open with Tony:** how to resolve ties like mix/mĩ (end-of-word dictionary fix for doubled keys, and/or the previous English word as a hint).
+**Open with the maintainer:** how to resolve ties like mix/mĩ (end-of-word dictionary fix for doubled keys, and/or the previous English word as a hint).
 
 ## 16. Auto update
 
 **Status:** Done 2026-10-28 (1.0.4).
 
-**Asked by Tony.** "Add auto update and check for update feature to the app."
+**Asked by the maintainer.** "Add auto update and check for update feature to the app."
 
 **Decided.**
-- Sparkle 2. Feed at vikey.app/appcast.xml, written by `release.sh`. Updates are EdDSA-signed; the private key is `~/.secrets/vikey_sparkle_ed25519`, the public key is in Info.plist.
-- On by default: checks daily, downloads in the background, installs when Vikey quits (or after the user confirms). The "Tự động cập nhật" toggle in the main window turns it off.
+- Sparkle 2. Feed at the website/appcast.xml, written by `release.sh`. Updates are EdDSA-signed; the private key is `~/.secrets/amikey_sparkle_ed25519`, the public key is in Info.plist.
+- On by default: checks daily, downloads in the background, installs when amiKey quits (or after the user confirms). The "Tự động cập nhật" toggle in the main window turns it off.
 - Menu: "Kiểm tra cập nhật…" checks now and shows Sparkle's window (in Vietnamese).
 - Tested end to end with a local 1.0.5 test build: automatic install on quit, and the manual check → install → relaunch.
 
@@ -580,18 +580,18 @@ Neighbors as the main signal made things worse (mixed text puts English nouns ne
 
 **Status:** Done 2026-10-28.
 
-**Asked by Tony.** "Disable 'nhớ riêng cho từng trang web' by default, upon enable, ask for the permission right away. Add (?) icon and tooltip to explain each option." Then: "hide the Nhật ký gõ menu, normal people aren't supposed to see that."
+**Asked by the maintainer.** "Disable 'nhớ riêng cho từng trang web' by default, upon enable, ask for the permission right away. Add (?) icon and tooltip to explain each option." Then: "hide the Nhật ký gõ menu, normal people aren't supposed to see that."
 
 **Decided.**
 - Per-site memory starts off. Turning it on reads the active tab of every running supported browser once, which shows macOS's Automation prompt right away. If the user refuses, the option turns back off and an alert links to System Settings › Automation.
 - Every setting in the main window has a (?) after its title: tooltip on hover, popover on click.
-- The Gỡ lỗi (typing log) menu is not in the menu bar icon's menu. It lives in the Vikey app menu (shown while a Vikey window is open), always visible there (Tony 2026-10-28).
+- The Gỡ lỗi (typing log) menu is not in the menu bar icon's menu. It lives in the amiKey app menu (shown while a amiKey window is open), always visible there (the maintainer 2026-10-28).
 
 ## 14. Quotes and apostrophes end a word
 
 **Status:** Done 2026-10-28. Rule cases D14 in `rules.tsv`.
 
-**Asked by Tony.** "trang ưeb" (typed inside double quotes) and "doén't" didn't change automatically.
+**Asked by the maintainer.** "trang ưeb" (typed inside double quotes) and "doén't" didn't change automatically.
 
 **Decided.**
 - A closing `"` or `)` ends a word like a comma does, in both modes: an English word typed in Vietnamese mode is put back before it.
@@ -602,9 +602,9 @@ Neighbors as the main signal made things worse (mixed text puts English nouns ne
 
 **Status:** Done 2026-10-28. In the engine and on the website demo.
 
-**Asked by Tony.** "Can we detect this sooner? Ideally correct at 'thí makes'. Currently I type 'thí makes' and 'thí' is still not changed."
+**Asked by the maintainer.** "Can we detect this sooner? Ideally correct at 'thí makes'. Currently I type 'thí makes' and 'thí' is still not changed."
 
-**Rule (D13).** A word that looks the same in both modes but is English-only ("makes"), right after an ambiguous word that stayed Vietnamese ("thí", which reads as "this"), means the pair is English. Vikey switches at "makes" and fixes "thí" → "this".
+**Rule (D13).** A word that looks the same in both modes but is English-only ("makes"), right after an ambiguous word that stayed Vietnamese ("thí", which reads as "this"), means the pair is English. amiKey switches at "makes" and fixes "thí" → "this".
 - It fires only when the immediately preceding word is ambiguous and its English reading is at least AS_PLAIN_MARGIN = 15 points (about 30×) more common than its Vietnamese one. "this" vs "thí" clears that by 20.
 
 **Measured**
@@ -620,12 +620,12 @@ Neighbors as the main signal made things worse (mixed text puts English nouns ne
 - six chat lines improve: "call thí Sunday" → "this Sunday", "há tô many changes" → "has too many changes";
 - one line keeps the rare "bừ" typed as keys.
 
-**Website demo examples (Tony: "too many server examples, be creative").** Five scenes, each one broken by plain Telex:
+**Website demo examples (the maintainer: "too many server examples, be creative").** Five scenes, each one broken by plain Telex:
 - merge → mẻge;
 - issue → isue;
 - "this makes sense" → "thí makes sến";
 - version → veión;
-- test → tét. (Tony: every scene is English typed while in Vietnamese mode, since that is the convincing case.) Highlights appear as soon as a word diverges.
+- test → tét. (the maintainer: every scene is English typed while in Vietnamese mode, since that is the convincing case.) Highlights appear as soon as a word diverges.
 
 **Known.** "pair" in Vietnamese mode stays "pải", because the subtitle word list contains the misspelling "pải" (of "phải") with a low score. The fix for later is cleaning typo-like rare syllables out of the Vietnamese list.
 
@@ -635,7 +635,7 @@ Neighbors as the main signal made things worse (mixed text puts English nouns ne
 
 **Status:** Done 2026-10-28 and released as 1.0.1.
 
-**Asked by Tony.**
+**Asked by the maintainer.**
 - "Nhật ký gõ is only a debug feature. Make it opt-in from the app and remove mention of it on the website."
 - Move the credit line from the main window into the standard macOS About window.
 
@@ -643,34 +643,34 @@ Neighbors as the main signal made things worse (mixed text puts English nouns ne
 - **Typing log off by default.** With the log off, nothing is counted or recorded: every log entry point returns immediately, so the log costs nothing on the typing path.
 - **Where it lives now:** the menu bar submenu "Gỡ lỗi" → "Ghi nhật ký gõ" turns it on. "Xem nhật ký gõ…" opens the window and is disabled while logging is off. The main window no longer has a log row.
 - **Website:** every mention is removed (changelog, FAQ, privacy). The README documents it under "Debug typing log".
-- **Credits:** the main window footer is gone. The standard About panel ("Giới thiệu Vikey" in the menu) shows Tony Dinh, the OpenKey/Tuyen Mai credit, GPL-3.0, and links to vikey.app and GitHub. The Info.plist copyright is "© 2026 Tony Dinh".
-- **Repo:** the GitHub repo's website is set to https://vikey.app.
+- **Credits:** the main window footer is gone. The standard About panel ("Giới thiệu amiKey" in the menu) shows the maintainer Dinh, the OpenKey/Tuyen Mai credit, GPL-3.0, and links to the website and GitHub. The Info.plist copyright is "© 2026 the maintainer Dinh".
+- **Repo:** the GitHub repo's website is set to https://the website.
 
 ---
 
-## 11. vikey.app, open-source release, compact window
+## 11. the website, open-source release, compact window
 
-**Status:** Done 2026-10-28. Vikey 1.0.0 is public at https://vikey.app and on GitHub Releases.
+**Status:** Done 2026-10-28. amiKey 1.0.0 is public at https://the website and on GitHub Releases.
 
-**Asked by Tony.**
-- Buy vikey.app and make a free, open-source website like clipaudit.app.
-- Add the author Tony Dinh, while still crediting OpenKey by Tuyen Mai.
+**Asked by the maintainer.**
+- Buy the website and make a free, open-source website like clipaudit.app.
+- Add the author the maintainer Dinh, while still crediting OpenKey by Tuyen Mai.
 - Opening the app while it runs shows the main window.
 - Make the main window smaller and drop the sidebar.
 - Put the history in its own window.
 
 **Decisions**
 
-- **Domain.** vikey.app was registered on the Cloudflare dedicated account ($8.20; renews at $14.20).
-  - Hosting: Pages project "vikey".
+- **Domain.** the website was registered on the Cloudflare dedicated account ($8.20; renews at $14.20).
+  - Hosting: Pages project "amikey".
   - www redirects to the apex with a 301.
   - Always-HTTPS is on.
 - **Website.** Vietnamese, ClipAudit's layout and style, indigo.
-  - **Home hero:** the typing demo is replayed from frames that the real engine produced key by key (`harness frames`), so the site shows exactly what Vikey does.
+  - **Home hero:** the typing demo is replayed from frames that the real engine produced key by key (`harness frames`), so the site shows exactly what amiKey does.
   - **Screenshots:** 2x, taken on a BetterDisplay HiDPI virtual screen.
   - **Pages:** download (DMG plus checksum), changelog, FAQ, privacy.
   - **Copy review:** reviewed by a subagent (avoid-AI-writing and copywriting rules). That fixed two factual errors: keystroke logging is on by default, and Firefox has no per-site memory.
-  - **Phones:** the download button leads to /download, which explains that Vikey is for Mac.
+  - **Phones:** the download button leads to /download, which explains that amiKey is for Mac.
 - **Release.** `Tools/release/release.sh <version>` runs:
   1. bump the version;
   2. the engine rule lock;
@@ -683,17 +683,17 @@ Neighbors as the main signal made things worse (mixed text puts English nouns ne
 - **App.**
   - **Window:** one compact window (460 points wide): a language switch on top, then hotkey, auto-switch, typing settings and launch at login, with an author/credit footer.
   - **History:** the typing history opens in its own window.
-  - **Reopening:** reopening Vikey shows the main window, and opening it by hand also shows the window.
+  - **Reopening:** reopening amiKey shows the main window, and opening it by hand also shows the window.
 - **Bug found while taking screenshots.** Letting the window track the SwiftUI content size live crashed AppKit's constraint pass on a HiDPI (Retina) screen. The window is now sized once from the content.
 
 ---
 
-## 10. Vikey: new name, new app, fewer features
+## 10. amiKey: new name, new app, fewer features
 
 **Status:** In progress 2026-10-28.
 
-**Asked by Tony.**
-- "I want to make this official. Let's call this project Vikey."
+**Asked by the maintainer.**
+- "I want to make this official. Let's call this project amiKey."
 - Rename everything, including the repo and package name.
 - Rebuild the UI in modern SwiftUI.
 - Remove VNI.
@@ -704,10 +704,10 @@ He approved Otto's suggested cuts and added: "gõ tắt: remove".
 **Decisions**
 
 - **Name.**
-  - Repo: tonyminibot/Vikey.
-  - App: Vikey.
-  - Bundle ID: com.devuap.vikey.
-  - Core: VikeyCore.
+  - Repo: O365ServeronMS/amiKey.
+  - App: amiKey.
+  - Bundle ID: com.devuap.amikey.
+  - Core: amiKeyCore.
   - Credit: "based on OpenKey by Tuyen Mai" is kept in the About screen, the file headers and the README, as GPL-3.0 requires.
 - **Kept**
   - Telex, with modern or classic tone placement.
@@ -736,7 +736,7 @@ He approved Otto's suggested cuts and added: "gõ tắt: remove".
 - **New app.**
   - SwiftUI menu bar app (MenuBarExtra, macOS 13+), generated with xcodegen.
   - Settings window: General, Typing, Auto switch, About.
-  - Accessibility onboarding that starts Vikey as soon as permission is granted.
+  - Accessibility onboarding that starts amiKey as soon as permission is granted.
   - Typing-log window and hotkey recorder.
   - SMAppService for launch at login.
   - OpenKey's settings, per-app/per-site memory and typing log are migrated on first launch.
@@ -760,7 +760,7 @@ He approved Otto's suggested cuts and added: "gõ tắt: remove".
 
 **Status:** Fixed 2026-10-28 and sent as OpenKey-2.0.4-typo.
 
-**Reported by Tony.** He meant "lắm" but typed "lanwm": "I guess this will happen a lot."
+**Reported by the maintainer.** He meant "lắm" but typed "lanwm": "I guess this will happen a lot."
 
 **Findings**
 
@@ -788,9 +788,9 @@ On typo-free text the guard costs a little (chat 0.95 → 1.04), but real typing
 
 ## 8. Tuning with a mixed-text typing simulation
 
-**Status:** Built 2026-10-28 and sent as OpenKey-2.0.4-lookback. The double-key change was approved by Tony the same day and shipped in OpenKey-2.0.4-err.
+**Status:** Built 2026-10-28 and sent as OpenKey-2.0.4-lookback. The double-key change was approved by the maintainer the same day and shipped in OpenKey-2.0.4-err.
 
-**Reported by Tony.** "I typed 'this makes' in VN mode and got 'thí makes'. Can we correct thí → this?" Then: "Run the engine over a large mixed Vietnamese/English text, key by key, to see how close it gets without manual switching."
+**Reported by the maintainer.** "I typed 'this makes' in VN mode and got 'thí makes'. Can we correct thí → this?" Then: "Run the engine over a large mixed Vietnamese/English text, key by key, to see how close it gets without manual switching."
 
 **Method.** `Tools/autoswitch/sim` types two corpora into the real engine and mirrors the macOS layer:
 - 21k words of chat-style messages;
@@ -817,18 +817,18 @@ With no manual switching at all, wrong words go 9.8% → 1.2% (chat) and 3.2% �
 - **Unknown foreign words.** In VN mode, a word that is neither a real syllable nor in the English list, and fails the engine's own spelling rules, is restored and switches to English: TestFlight, analytics, workflow, postgresql. Without the spelling-rule check, rare real syllables like riệt and chịt were wrongly restored. Minimum 3 letters.
 - **Undo moved to Backspace.** This changes decision 5. The simulation showed the hotkey can't mean both "undo that fix" and "the next word is in the other language": after "wifi" was correctly fixed, pressing the hotkey to type "tốt" reverted it to "ừii". Backspace right after an auto-fix now restores the original word and language, like macOS autocorrect. The hotkey is always a plain switch.
 - **"cors gif" in EN mode now becomes "có gì".** Look-back judges the common Vietnamese phrase more likely.
-- **Decided by Tony, 2026-10-28: keep both letters on a double key ("let's switch to 'err', I want to try it out").** Doubled-letter English words (issue, miss, sorry, pass, office, error, password, traffic) cause about a third of the remaining manual switches, because Telex drops one letter. Keeping both letters when the double key switches to English cuts chat manual switches from 1.51 to 0.95 per 100 words. This replaces rule 1's earlier "er" output: when the doubled tone key switches to English, it now outputs both letters (err, issue, sorry). Default on, controlled by `AS_DOUBLE_KEEP`.
+- **Decided by the maintainer, 2026-10-28: keep both letters on a double key ("let's switch to 'err', I want to try it out").** Doubled-letter English words (issue, miss, sorry, pass, office, error, password, traffic) cause about a third of the remaining manual switches, because Telex drops one letter. Keeping both letters when the double key switches to English cuts chat manual switches from 1.51 to 0.95 per 100 words. This replaces rule 1's earlier "er" output: when the doubled tone key switches to English, it now outputs both letters (err, issue, sorry). Default on, controlled by `AS_DOUBLE_KEEP`.
 - **Bug fixed along the way.** Look-back history is now cleared when the language changes from the menu and on every app switch, so a rewrite can never use stale word lengths.
 
 ---
 
 ## 7. Typing log to measure and tune auto-switch
 
-**Status:** Built 2026-10-28 and sent as OpenKey-2.0.4-log. Tony uses it and sends the log for tuning.
+**Status:** Built 2026-10-28 and sent as OpenKey-2.0.4-log. The maintainer uses it and sends the log for tuning.
 
-**User story.** As the user, I want Vikey to record how often I switch language by hand versus how often it switches for me, plus what I typed, so the engine can be tuned. The goal is the fewest manual switches.
+**User story.** As the user, I want amiKey to record how often I switch language by hand versus how often it switches for me, plus what I typed, so the engine can be tuned. The goal is the fewest manual switches.
 
-**What is recorded.** The log is `~/Library/Application Support/Vikey/typing-log.jsonl`, one JSON object per line. The file is user-only (0600) and rotates at 20 MB, keeping one old file.
+**What is recorded.** The log is `~/Library/Application Support/amiKey/typing-log.jsonl`, one JSON object per line. The file is user-only (0600) and rotates at 20 MB, keeping one old file.
 
 | Event | When | Fields |
 |---|---|---|
@@ -846,7 +846,7 @@ With no manual switching at all, wrong words go 9.8% → 1.2% (chat) and 3.2% �
 - in password managers: 1Password, Bitwarden, Apple Passwords, Keychain Access, LastPass, Dashlane, Enpass, KeePassXC, NordPass;
 - in terminals: Terminal, iTerm2, Warp, Ghostty, Alacritty, kitty, WezTerm, Hyper, Termius. sudo and ssh passwords there are typed without secure input.
 
-Word recording can be turned off in the log window. Nothing leaves the Mac; Tony sends the file himself.
+Word recording can be turned off in the log window. Nothing leaves the Mac; the maintainer sends the file himself.
 
 **Screen.** The status menu gets "Nhật ký gõ...". The window shows:
 - counts for today, 7 days and all time, including manual switches per 100 words;
@@ -864,7 +864,7 @@ Word recording can be turned off in the log window. Nothing leaves the Mac; Tony
 
 **Status:** Fixed 2026-10-28 and sent as OpenKey-2.0.4-autoswitch2.
 
-**Reported by Tony.** "I typed `var`, a popular short form for variable. We probably need to handle a lot of things for developers too."
+**Reported by the maintainer.** "I typed `var`, a popular short form for variable. We probably need to handle a lot of things for developers too."
 
 **Cause.** "var" isn't in the English dictionary, and its Telex replay "vả" is a real Vietnamese word, so English mode converted it.
 
@@ -874,7 +874,7 @@ Word recording can be turned off in the log window. Nothing leaves the Mac; Tony
 - **Identifier guard.** Only a word that starts after a space, Enter, Tab, click or shortcut is ever checked. Text after . _ - / ( and similar is never touched, so obj.dir, os.path, my_var and image.gif stay as typed. This applies in both modes.
 - **Not added.** "gif" and "conf" type the very common Vietnamese "gì" and "còn". Those win in English mode when the word stands alone. File names are covered by the guard.
 - **Vietnamese mode keeps Vietnamese.** I tried letting programming words beat moderately common Vietnamese words in VN mode, and rejected it: it broke "mô tả" (tar) and "vả lại" (var). In VN mode, "var" stays "vả".
-- **Known limit, from Tony's double-key rule.** In VN mode, err, error and less lose one letter (er, eror, les) and switch to English, because Telex consumes the doubled key.
+- **Known limit, from the maintainer's double-key rule.** In VN mode, err, error and less lose one letter (er, eror, les) and switch to English, because Telex consumes the doubled key.
 
 **Result.** In English mode, 0 of the ~250 programming words are changed except "gif", which is deliberate. All regression cases and live cases pass.
 
@@ -882,11 +882,11 @@ Word recording can be turned off in the log window. Nothing leaves the Mac; Tony
 
 ## 5. Auto-switch language from correction behavior
 
-**Status:** Built 2026-10-28 and sent as OpenKey-2.0.4-autoswitch. Tony is testing.
+**Status:** Built 2026-10-28 and sent as OpenKey-2.0.4-autoswitch. The maintainer is testing.
 
-**User story.** As someone who types Vietnamese and English all day, I want Vikey to notice when I'm typing in the wrong mode and switch for me, so I rarely press the switch hotkey.
+**User story.** As someone who types Vietnamese and English all day, I want amiKey to notice when I'm typing in the wrong mode and switch for me, so I rarely press the switch hotkey.
 
-### Tony's rules (2026-10-28)
+### the maintainer's rules (2026-10-28)
 
 1. **Double modifier key, VN → EN.** Pressing a tone or mark key twice inside a word (e r r) switches to English immediately. The output stays the normal Telex result ("er", not "err"). Telex has a good reason for that.
 2. **Word end in VN mode, VN → EN.** If the raw keys, exactly as typed and in that order, are an English word, and the Vietnamese result isn't a real syllable, restore the keys and switch.
@@ -936,7 +936,7 @@ Word recording can be turned off in the log window. Nothing leaves the Mac; Tony
 
 **User story.** As a user, I want a model trained on my own behavior to predict the right language for each new context, so manual switches go down over time.
 
-**Decision.** Tony decided it's overkill and dropped it. Nothing was built.
+**Decision.** The maintainer decided it's overkill and dropped it. Nothing was built.
 
 ---
 
@@ -976,15 +976,15 @@ Word recording can be turned off in the log window. Nothing leaves the Mac; Tony
 - No longer tapping mouse-drag events.
 - Tagging the app's own synthesized events.
 
-**Skipped.** The forced-English app list. That is a behavior change Tony didn't ask for.
+**Skipped.** The forced-English app list. That is a behavior change the maintainer didn't ask for.
 
 ---
 
 ## 1. The app stops typing until restarted
 
-**Status:** Shipped, commit d755b50. Tony is testing on his MacBook for a few weeks from 2026-10-27.
+**Status:** Shipped, commit d755b50. The maintainer is testing on their MacBook for a few weeks from 2026-10-27.
 
-**User story.** As a daily user, I want Vikey to keep working without quitting and reopening it.
+**User story.** As a daily user, I want amiKey to keep working without quitting and reopening it.
 
 **Cause.** macOS disables the event tap when it times out or on user input (a slow Mac, secure input), and the app never turned it back on.
 

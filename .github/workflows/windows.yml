@@ -3,9 +3,9 @@ on:
   push:
     branches: [windows, main]
     tags: ['v*']
-    paths: [Engine/**, Tools/autoswitch/**, Windows/**, App/Resources/Emoji.json, project.yml, .github/workflows/windows.yml]
+    paths: [Engine/**, Tools/autoswitch/**, Windows/**, project.yml, .github/workflows/windows.yml]
   pull_request:
-    paths: [Engine/**, Tools/autoswitch/**, Windows/**, App/Resources/Emoji.json, project.yml, .github/workflows/windows.yml]
+    paths: [Engine/**, Tools/autoswitch/**, Windows/**, project.yml, .github/workflows/windows.yml]
   workflow_dispatch:
     inputs:
       release_tag:
@@ -42,7 +42,7 @@ jobs:
       - name: Engine lock (rule cases, golden, Telex lock, driver parity, perf)
         run: pwsh Windows/check.ps1
         shell: pwsh
-      - name: Build app (version from project.yml, like the Mac app)
+      - name: Build app (version from project.yml)
         if: hashFiles('Windows/App/CMakeLists.txt') != ''
         run: |
           cmake -S Windows -B Windows/build -G Ninja -DCMAKE_BUILD_TYPE=Release

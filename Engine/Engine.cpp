@@ -1,6 +1,6 @@
 //
 //  Engine.cpp
-//  Vikey (based on OpenKey)
+//  amiKey (based on Vikey and OpenKey)
 //
 //  Created by Tuyen on 1/18/19.
 //  Copyright © 2019 Tuyen Mai. All rights reserved.
@@ -167,7 +167,7 @@ Byte _spellingEndIndex = 0;
 /** Teencode spelling (D53, off by default): chat forms count as Vietnamese so they aren't put back to their keys:
  *  z / dz for d ("zui zẻ", "zô", "dzô"), the open rimes "ie" ("bíe") and "oy" ("gòy"), and k after i or ư ("thík",
  *  "ừk"). Idea from VietTelex (MIT). "wá" isn't possible in Telex: w is ư. */
-int vTeencode = 1;   //on by default (Tony, 2026-10-31)
+int vTeencode = 1;   //on by default (maintainer, 2026-10-31)
 int vTelexStyle = 0;  //Telex (D56); 1 and 2 are the Simple Telex styles from OpenKey
 #include "TeencodeData.h"
 static bool _teenRule = false;   //this word is valid only by a teencode rule: kept at its end only if it's a known word
@@ -1876,7 +1876,7 @@ static void asRestoreToEnglish(const int& handleCode, bool literalOnly) {
     }
     //how many earlier words follow the switch: consecutive, ambiguous, and fitting in the output buffer.
     //Not after an acronym (2+ capitals): Vietnamese text is full of them, so they say nothing about the
-    //words before ("bên ASL", "của USA" stay Vietnamese: Tony, D42)
+    //words before ("bên ASL", "của USA" stay Vietnamese: maintainer, D42)
     int back = 0, newCount = _stateIndex, deleteCount = _index;
     bool acronym = !asFewCapitals(KeyStates, _stateIndex);
     while (!literalOnly && !acronym && back < _asPrevCount && _asPrev[back].lookbackOk &&
@@ -2051,7 +2051,7 @@ bool vAutoSwitchCheckEnglishWord(const Uint32* keys, const int& count,
 #define AS_CAPS_VN_FLOOR 15   //all capitals convert only to a common syllable (IRS stays, not "Í"): D23, D27
 #endif
     if (count > 1 && allCaps && (en != AS_MISSING || vn < AS_CAPS_VN_FLOOR)) return false;
-    //a lone all-caps word converts when the Telex marks it as Vietnamese: THOONG, THUOWNGF, VIEETJ (Tony, D41).
+    //a lone all-caps word converts when the Telex marks it as Vietnamese: THOONG, THUOWNGF, VIEETJ (maintainer, D41).
     //Acronyms rarely double a vowel or put w after a vowel, and the floor above already keeps rare syllables out
     bool telexMarked = false;
     for (int x = 0; raw[x] && raw[x + 1]; x++) {
