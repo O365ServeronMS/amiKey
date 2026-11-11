@@ -9,10 +9,12 @@
 #include "Prefs.h"
 #include "KeyMap.h"
 #include "Emoji.h"
+#include "Updater.h"
 #include "resource.h"
 #include <commctrl.h>
 #include <windowsx.h>
 #include <shellapi.h>
+#include <shlwapi.h>
 #include <objidl.h>
 #include <d2d1.h>
 #include <dwrite.h>
@@ -27,6 +29,7 @@ namespace Gdiplus { using std::min; using std::max; }
 #include <functional>
 #pragma comment(lib, "comctl32.lib")
 #pragma comment(lib, "gdiplus.lib")
+#pragma comment(lib, "shlwapi.lib")
 #pragma comment(lib, "d2d1.lib")
 #pragma comment(lib, "dwrite.lib")
 using namespace Gdiplus;
@@ -38,6 +41,7 @@ static HFONT fBody, fBodyBold, fSmall, fWordmark, fTitle, fMono, fTitle2, fCallo
 static const COLORREF BG = RGB(246, 246, 246), GROUP = RGB(255, 255, 255), BORDER = RGB(226, 226, 226), SEP = RGB(236, 236, 236);
 static const COLORREF TEXT = RGB(0, 0, 0), SECONDARY = RGB(110, 110, 115), TERTIARY = RGB(170, 170, 175), ACCENT = RGB(10, 124, 255), GREEN = RGB(52, 199, 89), TOGGLE_OFF = RGB(233, 233, 235);
 static const COLORREF BRAND = RGB(79, 70, 229);   // design/BRAND.md #4F46E5
+static const COLORREF KEY_ORANGE = RGB(248, 152, 0);   // design/BRAND.md: the wordmark's "Key" #F89800
 static const int W = 460, MARGIN = 20, ROW = 34, GAP = 12, RADIUS = 10;   // fits a 1366x768 screen with every row shown
 static ULONG_PTR gdipToken = 0;
 static HINSTANCE _inst;
@@ -72,11 +76,36 @@ static int textWidth(HDC dc, HFONT f, const std::wstring& s) { SelectObject(dc, 
 static int textHeight(HFONT f, const std::wstring& s, int width) {   // wrapped height
     HDC dc = GetDC(nullptr); SelectObject(dc, f); RECT r = {0, 0, width, 0}; DrawTextW(dc, s.c_str(), -1, &r, DT_CALCRECT | DT_WORDBREAK | DT_NOPREFIX); ReleaseDC(nullptr, dc); return r.bottom;
 }
-/// "ami" in the text colour, "Key" in brand indigo, bold (Brand.swift Wordmark).
+/// The ami logo (Resources/ami-wordmark.png: letters + red dot), loaded once from the exe.
+static Bitmap* amiLogo() {
+    static Bitmap* b = nullptr; static bool tried = false;
+    if (tried) return b; tried = true;
+    HMODULE m = GetModuleHandleW(nullptr); HRSRC r = FindResourceW(m, MAKEINTRESOURCEW(IDR_AMI_WORDMARK), RT_RCDATA); if (!r) return nullptr;
+    HGLOBAL g = LoadResource(m, r); IStream* s = g ? SHCreateMemStream((const BYTE*)LockResource(g), SizeofResource(m, r)) : nullptr; if (!s) return nullptr;
+    b = Bitmap::FromStream(s); s->Release();
+    if (b && b->GetLastStatus() != Ok) { delete b; b = nullptr; }
+    return b;
+}
+static const float AMI_LETTERS = 0.66f;   // the letters' share of the logo's height (the red dot is above them)
+/// Logo size for font f: its letters as tall as the font's capitals.
+static SizeF logoSize(HDC dc, HFONT f) {
+    Bitmap* b = amiLogo(); if (!b) return SizeF(0, 0);
+    SelectObject(dc, f); TEXTMETRICW tm; GetTextMetricsW(dc, &tm);
+    float h = (tm.tmAscent - tm.tmInternalLeading) / AMI_LETTERS;
+    return SizeF(h * b->GetWidth() / b->GetHeight(), h);
+}
+static int wordmarkWidth(HDC dc, HFONT f) { SizeF s = logoSize(dc, f); return (s.Width ? (int)(s.Width + 0.5f) + 3 : textWidth(dc, f, L"ami")) + textWidth(dc, f, L"Key"); }
+/// The wordmark: the ami logo, then "Key" in orange, bold, on the font's baseline at (x, y) as TextOutW would put it.
 static void drawWordmark(HDC dc, HFONT f, int x, int y) {
     SelectObject(dc, f); SetBkMode(dc, TRANSPARENT);
-    SetTextColor(dc, TEXT); TextOutW(dc, x, y, L"ami", 3);
-    SetTextColor(dc, BRAND); TextOutW(dc, x + textWidth(dc, f, L"ami"), y, L"Key", 3);
+    TEXTMETRICW tm; GetTextMetricsW(dc, &tm); int base = y + tm.tmAscent;
+    SizeF s = logoSize(dc, f); int kx;
+    if (s.Width) {
+        Graphics g(dc); g.SetInterpolationMode(InterpolationModeHighQualityBicubic); g.SetPixelOffsetMode(PixelOffsetModeHighQuality);
+        g.DrawImage(amiLogo(), RectF((REAL)x, base - s.Height, s.Width, s.Height));
+        kx = x + (int)(s.Width + 0.5f) + 3;
+    } else { SetTextColor(dc, TEXT); TextOutW(dc, x, y, L"ami", 3); kx = x + textWidth(dc, f, L"ami"); }
+    SelectObject(dc, f); SetTextColor(dc, KEY_ORANGE); TextOutW(dc, kx, y, L"Key", 3);
 }
 /// Text that may hold emoji: DirectWrite draws colour glyphs (GDI draws them black and white).
 static void colorText(HDC dc, const std::wstring& s, RECT r, float px, COLORREF c) {
@@ -303,7 +332,7 @@ static void startRecording(HWND c) { if (Recorder* r = rec(c)) { SetFocus(c); r-
 static void destroyChildren(HWND h) { std::vector<HWND> kids; for (HWND c = GetWindow(h, GW_CHILD); c; c = GetWindow(c, GW_HWNDNEXT)) kids.push_back(c); for (HWND c : kids) DestroyWindow(c); }
 
 // ---- main window -----------------------------------------------------------------------------
-enum { C_SEG = 200, C_HOTKEY, C_BEEP, C_AUTO, C_PAUSE, C_SMART, C_SITE, C_MARK, C_SPELL, C_RESTORE, C_LOGIN, C_UPDATE, C_LOGKEYS, C_EMOJI, C_EMOJIKEY, C_FEEDBACK, C_STYLE,
+enum { C_SEG = 200, C_HOTKEY, C_BEEP, C_AUTO, C_PAUSE, C_SMART, C_SITE, C_MARK, C_SPELL, C_RESTORE, C_LOGIN, C_UPDATE, C_LOGKEYS, C_EMOJI, C_EMOJIKEY, C_FEEDBACK, C_STYLE, C_CHECKUPDATE,
        L_REFRESH = 300, L_OPEN, L_CLEAR, A_LINK = 400, O_BACK = 500, O_NEXT, O_REC, O_BEEP, O_EMOJI, O_EMOJIKEY, O_EDIT = 520 };
 static const UINT WM_REBUILD = WM_APP + 20;
 static HWND _win, _seg, _hint, _logWin, _logList, _logSummary, _logGrid, _aboutWin, _onbWin, _ackWin, _tooltip;
@@ -400,8 +429,10 @@ static void buildMain() {
     beginGroup(nullptr);
     toggleRow(L"Mở amiKey khi đăng nhập", L"Tự mở amiKey mỗi khi bạn đăng nhập vào Windows.", C_LOGIN, prefs::launchAtLogin());
     toggleRow(L"Tự động cập nhật", L"Mỗi ngày amiKey kiểm tra bản mới trên GitHub, tự tải về và cài khi bạn thoát amiKey hoặc tắt máy.", C_UPDATE, prefs::getInt(L"AutoUpdate", 1) != 0);
-    HWND fb = row(L"Góp ý", L"Báo lỗi hoặc góp ý cho amiKey: mở trang GitHub Issues trong trình duyệt.", L"amiKeyButton", C_FEEDBACK, 120, 26, WS_TABSTOP);
-    SetWindowTextW(fb, L"Gửi góp ý…"); setBg(fb, GROUP);
+    HWND fb = row(L"Phiên bản " AMIKEY_VERSION_W, L"Kiểm tra cập nhật: xem có bản amiKey mới trên GitHub và cài ngay. Góp ý: báo lỗi hoặc góp ý qua GitHub Issues.", L"amiKeyButton", C_FEEDBACK, 84, 26, WS_TABSTOP);
+    SetWindowTextW(fb, L"Góp ý…"); setBg(fb, GROUP);
+    HWND up = child(L"amiKeyButton", L"Kiểm tra cập nhật…", WS_TABSTOP, W - MARGIN - 16 - 84 - 8 - 148, _y - ROW + (ROW - 26) / 2, 148, 26, C_CHECKUPDATE, fBody);
+    _ctl[C_CHECKUPDATE] = up; setBg(up, GROUP);
     endGroup();
     refreshEnabled();
     RECT wr = {0, 0, W, _y}; AdjustWindowRectEx(&wr, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX, FALSE, 0);
@@ -432,6 +463,7 @@ static LRESULT CALLBACK mainProc(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
         case C_EMOJI: prefs::setInt(L"EmojiPicker", toggleOn(c)); core::reloadSettings(); emoji::settingsChanged(); afterHotkeyChange(); break;
         case C_LOGIN: prefs::setLaunchAtLogin(toggleOn(c)); setToggle(c, prefs::launchAtLogin()); break;
         case C_UPDATE: prefs::setInt(L"AutoUpdate", toggleOn(c)); break;
+        case C_CHECKUPDATE: if (HWND tray = FindWindowW(L"amiKeyTray", nullptr)) updater::checkNow(tray); break;   // the tray window shows the result
         case C_FEEDBACK: ShellExecuteW(nullptr, L"open", L"https://github.com/O365ServeronMS/amiKey/issues/new", nullptr, nullptr, SW_SHOWNORMAL); break;
         }
         return 0; }
@@ -768,7 +800,7 @@ static LRESULT CALLBACK aboutProc(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
         HBRUSH bg = CreateSolidBrush(GROUP); FillRect(mem, &rc, bg); DeleteObject(bg);
         HICON icon = (HICON)LoadImageW(GetModuleHandleW(nullptr), MAKEINTRESOURCEW(IDI_APP), IMAGE_ICON, 96, 96, LR_DEFAULTCOLOR);
         if (icon) { DrawIconEx(mem, (rc.right - 96) / 2, 24, icon, 96, 96, 0, nullptr, DI_NORMAL); DestroyIcon(icon); }
-        SetBkMode(mem, TRANSPARENT); SelectObject(mem, fWordmark); SetTextColor(mem, TEXT); RECT r = {0, 130, rc.right, 160}; DrawTextW(mem, L"amiKey", -1, &r, DT_CENTER | DT_SINGLELINE);
+        drawWordmark(mem, fWordmark, (rc.right - wordmarkWidth(mem, fWordmark)) / 2, 130);
         SelectObject(mem, fSmall); SetTextColor(mem, SECONDARY); RECT r2 = {0, 162, rc.right, 182}; DrawTextW(mem, L"Phiên bản " AMIKEY_VERSION_W, -1, &r2, DT_CENTER | DT_SINGLELINE);
         _aboutLinks.clear(); int y = 196;
         std::vector<std::vector<Seg>> lines = {

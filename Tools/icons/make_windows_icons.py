@@ -1,23 +1,27 @@
-"""Builds the Windows icons from design/amiKey-logo.jpg.
+"""Builds the Windows icons and the wordmark image from the logos in design/.
 
-  amiKey.ico            app icon: the framed VE logo, 16-256 px
-  Icons/tray-{V,E}-{black,white}.ico   tray glyphs in the logo's style (square frame + slanted letter);
-                        black for a light taskbar, white for a dark one. Each size is drawn natively.
+  amiKey.ico                          app icon: the framed VE logo recolored to ami blue, 16-256 px
+  Icons/tray-{V,E}-{black,white}.ico  tray glyphs in the logo's style (square frame + slanted letter);
+                                      black for a light taskbar, white for a dark one. Each size is drawn natively.
+  Resources/ami-wordmark.png          the "ami" of design/ami-logo.jpg (no tagline, no (R)) on transparency;
+                                      the app draws it followed by "Key" in orange.
 
 usage: python Tools/icons/make_windows_icons.py
 """
 import os
-from PIL import Image, ImageDraw, ImageFont
+import numpy as np
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 ROOT = os.path.join(os.path.dirname(__file__), "..", "..")
 APP = os.path.join(ROOT, "Windows", "App")
-LOGO = os.path.join(ROOT, "design", "amiKey-logo.jpg")
 FONT = r"C:\Windows\Fonts\seguibli.ttf"   # Segoe UI Black Italic
+AMI_BLUE = (4, 102, 177)                  # sampled from design/ami-logo.jpg
 
-# app icon: crop to the frame (it is the icon's edge), drop the background around it
-logo = Image.open(LOGO).convert("RGB")
+# app icon: the VE logo cropped to its frame, its greys mapped onto ami blue
+logo = Image.open(os.path.join(ROOT, "design", "amiKey-logo.jpg")).convert("RGB")
 box = (200, 203, 824, 809)   # the frame's outer edges (~624 x 606, squared on resize)
-app = logo.crop(box).resize((256, 256), Image.LANCZOS)
+gray = ImageOps.grayscale(logo.crop(box).resize((256, 256), Image.LANCZOS))
+app = ImageOps.colorize(gray, black=(0, 38, 84), mid=AMI_BLUE, white=(255, 255, 255), midpoint=110)
 app.save(os.path.join(APP, "amiKey.ico"), sizes=[(s, s) for s in (16, 20, 24, 32, 40, 48, 64, 96, 128, 256)])
 
 def glyph(letter, size, rgb):
@@ -34,4 +38,13 @@ for letter in "VE":
     for name, rgb in (("black", (0, 0, 0)), ("white", (255, 255, 255))):
         imgs = [glyph(letter, s, rgb) for s in (16, 20, 24, 32, 40, 48, 64)]
         imgs[-1].save(os.path.join(APP, "Icons", f"tray-{letter}-{name}.ico"), sizes=[i.size for i in imgs], append_images=imgs[:-1])
-print("ok")
+
+# wordmark: "ami" (letters + red dot) without the tagline below and the (R) to the right; white background -> alpha
+ami = np.array(Image.open(os.path.join(ROOT, "design", "ami-logo.jpg")).convert("RGB").crop((36, 24, 304, 166))).astype(float)
+bg = 248.0
+alpha = np.clip((bg - ami.min(axis=2) - 6) / 150.0, 0, 1)
+rgb = np.where(alpha[..., None] > 0, (ami - (1 - alpha[..., None]) * bg) / np.maximum(alpha[..., None], 1e-3), 0)
+out = np.dstack([np.clip(rgb, 0, 255), alpha * 255]).astype(np.uint8)
+im = Image.fromarray(out, "RGBA"); im = im.crop(im.getbbox())
+im.save(os.path.join(APP, "Resources", "ami-wordmark.png"))
+print("ok", im.size)

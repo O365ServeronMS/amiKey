@@ -7,6 +7,7 @@
 #define IDR_SOUND_VI 201
 #define IDR_SOUND_EN 202
 #define IDR_EMOJI_JSON 203
+#define IDR_AMI_WORDMARK 204
 #ifndef AMIKEY_VERSION
 #define AMIKEY_VERSION "0.1.0"
 #endif

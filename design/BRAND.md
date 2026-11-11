@@ -9,14 +9,17 @@ Code that implements it: `Windows/App/Settings.cpp` (colors, `drawWordmark`), `T
 - In running text the name is plain text in the surrounding font and color: "amiKey tự chuyển…".
 
 ## Wordmark
-- "ami" in ink, "Key" in brand indigo, same font, **bold (700)**, no letter-spacing, never all caps.
+- The **ami logo** (`design/ami-logo.jpg`: blue "ami" with the red dot, without the "Always keeping trust" line and
+  the ®), followed by **"Key" in orange** `#F89800`, Segoe UI bold. The logo's letters are as tall as the capitals of "Key".
+  The app uses `Windows/App/Resources/ami-wordmark.png`, made by `Tools/icons/make_windows_icons.py`.
 - Use it wherever the name stands alone as a logo: app window headers, About.
 - Usually next to the icon, gap ≈ 0.3 × the text height.
 
-| | Light | Dark |
-|---|---|---|
-| "ami" (ink) | `#111318` | white / label color |
-| "Key" (brand indigo) | `#4F46E5` | `#8C87FF` |
+| | Color |
+|---|---|
+| "ami" (logo blue) | `#0466B1` |
+| the dot (logo red) | `#E91E26` |
+| "Key" (orange) | `#F89800` |
 
 ## Colors
 - **Brand indigo** `#4F46E5` (dark mode `#8C87FF`), hover/pressed `#4338CA`. The only accent color: buttons, links, the wordmark, highlights.
@@ -29,8 +32,8 @@ Code that implements it: `Windows/App/Settings.cpp` (colors, `drawWordmark`), `T
 - Headlines bold; body regular. Short lines, no orphans, no split phrases.
 
 ## Icon
-- `design/amiKey-logo.jpg`: the black "VE" monogram in a square frame. The app icon (`Windows/App/amiKey.ico`) is
-  this logo cropped to its frame. Don't recolor it or put it on a busy background.
+- `design/amiKey-logo.jpg`: the "VE" monogram in a square frame. The app icon (`Windows/App/amiKey.ico`) is this
+  logo cropped to its frame and recolored to ami blue. Don't recolor it or put it on a busy background.
 - Tray: `Windows/App/Icons/tray-{V,E}-{black,white}.ico`, a square frame with a slanted V (Vietnamese) or E (English),
   black on a light taskbar and white on a dark one. Rebuild all icons with `python Tools/icons/make_windows_icons.py`.
 
