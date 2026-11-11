@@ -1,6 +1,7 @@
 // amiKey for Windows: tray icon (V / E), menu, and the message loop the hooks need.
 #include <windows.h>
 #include <shellapi.h>
+#include <commctrl.h>
 #include <string>
 #include <windowsx.h>
 #include "Core.h"
@@ -17,6 +18,7 @@
 #pragma comment(lib, "shell32.lib")
 #pragma comment(lib, "gdi32.lib")
 #pragma comment(lib, "advapi32.lib")
+#pragma comment(lib, "comctl32.lib")
 
 static const UINT WM_TRAY = WM_APP + 1;
 static const UINT WM_AMIKEY_SETLANG = WM_APP + 2;   // tests: wParam = language (0 English, 1 Vietnamese)
@@ -28,27 +30,11 @@ enum { ID_VIET = 100, ID_ENG, ID_SETTINGS, ID_AUTOSWITCH, ID_UPDATE, ID_LOGTOGGL
 static HWND _hwnd; static NOTIFYICONDATAW _nid = {};
 static HICON _iconV, _iconE;
 
-/// Draws the menu-bar glyph: a rounded square with a V or E cut out, like the macOS icon.
+/// The tray glyph: the V or E icon in the logo's style (Icons/tray-*.ico), white on a dark taskbar, black on a light one.
 static HICON makeIcon(wchar_t letter, bool dark) {
-    const int S = 32;
-    HDC dc = CreateCompatibleDC(nullptr);
-    BITMAPINFO bi = {}; bi.bmiHeader.biSize = sizeof(bi.bmiHeader); bi.bmiHeader.biWidth = S; bi.bmiHeader.biHeight = -S; bi.bmiHeader.biPlanes = 1; bi.bmiHeader.biBitCount = 32;
-    void* bits = nullptr; HBITMAP color = CreateDIBSection(dc, &bi, DIB_RGB_COLORS, &bits, nullptr, 0);
-    HGDIOBJ old = SelectObject(dc, color);
-    DWORD* px = (DWORD*)bits; for (int i = 0; i < S * S; i++) px[i] = 0;
-    COLORREF fg = dark ? RGB(255, 255, 255) : RGB(0, 0, 0);
-    HBRUSH b = CreateSolidBrush(fg); HPEN p = CreatePen(PS_NULL, 0, 0);
-    SelectObject(dc, b); SelectObject(dc, p);
-    RoundRect(dc, 2, 3, S - 2, S - 3, 10, 10);
-    HFONT f = CreateFontW(-22, 0, 0, 0, FW_BOLD, 0, 0, 0, DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY, 0, L"Segoe UI");
-    SelectObject(dc, f); SetBkMode(dc, TRANSPARENT); SetTextColor(dc, RGB(1, 2, 3));
-    RECT r = {0, 1, S, S}; DrawTextW(dc, &letter, 1, &r, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
-    // punch the letter out: pixels drawn in the marker color become transparent; the rest opaque
-    for (int i = 0; i < S * S; i++) { DWORD c = px[i] & 0xFFFFFF; if (c == 0x030201) px[i] = 0; else if (c != 0) px[i] |= 0xFF000000; else px[i] = 0; }
-    SelectObject(dc, old); DeleteObject(f); DeleteObject(b); DeleteObject(p); DeleteDC(dc);
-    HBITMAP mask = CreateBitmap(S, S, 1, 1, nullptr);
-    ICONINFO ii = {TRUE, 0, 0, mask, color}; HICON h = CreateIconIndirect(&ii);
-    DeleteObject(mask); DeleteObject(color); return h;
+    int id = letter == L'V' ? (dark ? IDI_TRAY_V_WHITE : IDI_TRAY_V_BLACK) : (dark ? IDI_TRAY_E_WHITE : IDI_TRAY_E_BLACK);
+    HICON h = nullptr; LoadIconMetric(GetModuleHandleW(nullptr), MAKEINTRESOURCEW(id), LIM_SMALL, &h);   // the size for this DPI
+    return h;
 }
 static bool darkTaskbar() {
     HKEY h; DWORD v = 1, s = sizeof(v);

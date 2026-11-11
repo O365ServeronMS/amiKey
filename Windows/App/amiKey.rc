@@ -1,6 +1,10 @@
 #include <windows.h>
 #include "resource.h"
 IDI_APP ICON "amiKey.ico"
+IDI_TRAY_V_BLACK ICON "Icons/tray-V-black.ico"
+IDI_TRAY_V_WHITE ICON "Icons/tray-V-white.ico"
+IDI_TRAY_E_BLACK ICON "Icons/tray-E-black.ico"
+IDI_TRAY_E_WHITE ICON "Icons/tray-E-white.ico"
 1 24 "amiKey.manifest"
 IDR_SOUND_VI RCDATA "Sounds/SwitchToVietnamese.wav"
 IDR_SOUND_EN RCDATA "Sounds/SwitchToEnglish.wav"

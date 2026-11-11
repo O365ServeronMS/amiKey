@@ -1,5 +1,9 @@
 #pragma once
 #define IDI_APP 101
+#define IDI_TRAY_V_BLACK 102
+#define IDI_TRAY_V_WHITE 103
+#define IDI_TRAY_E_BLACK 104
+#define IDI_TRAY_E_WHITE 105
 #define IDR_SOUND_VI 201
 #define IDR_SOUND_EN 202
 #define IDR_EMOJI_JSON 203
