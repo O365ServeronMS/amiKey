@@ -12,7 +12,7 @@ on:
         description: "Existing GitHub release tag to build from, package for and upload to (e.g. v1.0.14)"
         required: false
       allow_unsigned:
-        description: "Upload unsigned installers when the Certum secrets are missing"
+        description: "Skip Certum signing (even when its secrets exist) and publish unsigned installers"
         type: boolean
         default: false
 jobs:
@@ -86,10 +86,8 @@ jobs:
           CERTUM_OTP: ${{ secrets.CERTUM_OTP }}
           ALLOW_UNSIGNED: ${{ inputs.allow_unsigned }}
         run: |
-          if (-not $env:CERTUM_OTP) {
-            if ($env:ALLOW_UNSIGNED -eq 'true') { "::warning::No CERTUM_OTP secret: packaging UNSIGNED (allow_unsigned)" | Out-Host; exit 0 }
-            throw "No CERTUM_OTP secret: refusing to publish unsigned installers (run by hand with allow_unsigned to override)"
-          }
+          if ($env:ALLOW_UNSIGNED -eq 'true') { "::warning::allow_unsigned: packaging UNSIGNED installers (Certum signing skipped)" | Out-Host; exit 0 }
+          if (-not $env:CERTUM_OTP) { throw "No CERTUM_OTP secret: refusing to publish unsigned installers (run by hand with allow_unsigned to override)" }
           Invoke-WebRequest -Uri $env:SSIGN_URL -OutFile ssign.zip
           $hash = (Get-FileHash ssign.zip -Algorithm SHA256).Hash.ToLower()
           if ($hash -ne $env:SSIGN_SHA256) { throw "ssign.zip checksum mismatch: $hash" }
