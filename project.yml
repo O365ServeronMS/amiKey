@@ -2,5 +2,5 @@
 # (.github/workflows/windows.yml) requires the tag to be v<MARKETING_VERSION>.
 settings:
   base:
-    MARKETING_VERSION: "1.0.33"
-    CURRENT_PROJECT_VERSION: "35"
+    MARKETING_VERSION: "1.0.34"
+    CURRENT_PROJECT_VERSION: "36"
