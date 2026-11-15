@@ -4,7 +4,7 @@
 
 This policy governs Authenticode signing of the Windows application and its installers for
 x64 and ARM64 releases of amiKey. It applies to the release workflow in
-\`.github/workflows/windows.yml\`.
+`.github/workflows/windows.yml`.
 
 The project uses two independent signature systems for different purposes:
 
@@ -12,14 +12,14 @@ The project uses two independent signature systems for different purposes:
   installers and protects their signed content from undetected modification.
 - **Ed25519 updater signature:** authenticates the exact installer bytes downloaded by
   amiKey's in-app updater. This mechanism is implemented by
-  \`Tools/release/sign_update.py\` and verified by \`Windows/App/Updater.cpp\`.
+  `Tools/release/sign_update.py` and verified by `Windows/App/Updater.cpp`.
 
 Authenticode does not replace, derive, or rotate the Ed25519 updater key. The updater
 public key embedded in the application remains unchanged by this workflow migration.
 
 ## Release signing sequence
 
-For each release tag \`v<MARKETING_VERSION>\`, the Windows workflow performs these steps:
+For each release tag `v<MARKETING_VERSION>`, the Windows workflow performs these steps:
 
 1. Build the x64 and ARM64 application binaries on GitHub-hosted Windows runners.
 2. Upload the unsigned application binaries as a GitHub Actions artifact and submit that
@@ -27,24 +27,24 @@ For each release tag \`v<MARKETING_VERSION>\`, the Windows workflow performs the
 3. Wait for SignPath to complete. The workflow fails if signed output is not returned.
 4. Replace the unsigned application binaries with the SignPath-signed binaries.
 5. Build the Inno Setup installers and portable ZIPs from those signed application binaries.
-   The portable ZIPs consequently contain the signed \`amiKey.exe\`.
+   The portable ZIPs consequently contain the signed `amiKey.exe`.
 6. Submit both installer executables to SignPath and replace the unsigned installers with
    the returned signed files.
-7. Generate and locally verify \`amiKey-update-x64.txt\` and
-   \`amiKey-update-arm64.txt\` using \`AMIKEY_UPDATE_KEY\`. The Ed25519 signature covers
+7. Generate and locally verify `amiKey-update-x64.txt` and
+   `amiKey-update-arm64.txt` using `AMIKEY_UPDATE_KEY`. The Ed25519 signature covers
    the final Authenticode-signed installer bytes.
 8. Publish the signed installers, portable ZIPs, and Ed25519 manifests to the GitHub
    release.
 
 The workflow is fail-closed: missing SignPath configuration, signing failure, missing
-signed output, missing \`AMIKEY_UPDATE_KEY\`, or manifest verification failure prevents
+signed output, missing `AMIKEY_UPDATE_KEY`, or manifest verification failure prevents
 release publication. There is no unsigned-release bypass in this workflow.
 
 ## Automatic approval policy
 
 The GitHub workflow submits signing requests automatically only for pushed release tags
-matching `v*` that pass the version check. There is no manual-dispatch signing path. The SignPath project must be configured with a signing policy that
-automatically approves eligible requests; this is a SignPath-side setting, not a GitHub
+matching `v*` that pass the version check. There is no manual-dispatch signing path. The
+SignPath project must be configured with a signing policy that automatically approves eligible requests; this is a SignPath-side setting, not a GitHub
 Actions input.
 
 Automatic approval is restricted to the dedicated amiKey release project and the two
@@ -53,20 +53,20 @@ be able to submit production signing requests. Do not configure automatic signin
 pull-request builds, arbitrary branches, or untrusted fork code.
 
 Before enabling automatic approval in SignPath, protect release-tag creation and restrict
-who can push or move \`v*\` tags. A release tag must identify reviewed source and a
+who can push or move `v*` tags. A release tag must identify reviewed source and a
 successful build. If the SignPath Foundation program imposes additional approval,
 reputation, or project-eligibility requirements, those requirements take precedence over
 this repository workflow configuration.
 
 ## SignPath project configuration
 
-Create a SignPath project for \`O365ServeronMS/amiKey\` and configure:
+Create a SignPath project for `O365ServeronMS/amiKey` and configure:
 
 - A signing policy for production Windows release signing with automatic approval,
   subject to SignPath's program rules.
 - An **EXE artifact configuration** that accepts the two app executables from the
   uploaded app artifact and signs Windows PE executables.
-- An **INSTALLER artifact configuration** that accepts the two \`*-Setup.exe\`
+- An **INSTALLER artifact configuration** that accepts the two `*-Setup.exe`
   files and signs Windows PE executables.
 - A code-signing certificate/profile assigned to that policy.
 
@@ -79,25 +79,25 @@ Add the following repository secret:
 
 | Secret | Purpose |
 | --- | --- |
-| \`SIGNPATH_API_TOKEN\` | SignPath API token with permission to submit signing requests for this project |
+| `SIGNPATH_API_TOKEN` | SignPath API token with permission to submit signing requests for this project |
 
 Add the following repository variables:
 
 | Variable | Purpose |
 | --- | --- |
-| \`SIGNPATH_ORGANIZATION_ID\` | SignPath organization ID |
-| \`SIGNPATH_PROJECT_SLUG\` | Project slug for amiKey |
-| \`SIGNPATH_SIGNING_POLICY_SLUG\` | Automatic release signing policy slug |
-| \`SIGNPATH_EXE_ARTIFACT_CONFIGURATION\` | Artifact configuration slug for \`amiKey.exe\` |
-| \`SIGNPATH_INSTALLER_ARTIFACT_CONFIGURATION\` | Artifact configuration slug for Inno Setup installers |
+| `SIGNPATH_ORGANIZATION_ID` | SignPath organization ID |
+| `SIGNPATH_PROJECT_SLUG` | Project slug for amiKey |
+| `SIGNPATH_SIGNING_POLICY_SLUG` | Automatic release signing policy slug |
+| `SIGNPATH_EXE_ARTIFACT_CONFIGURATION` | Artifact configuration slug for `amiKey.exe` |
+| `SIGNPATH_INSTALLER_ARTIFACT_CONFIGURATION` | Artifact configuration slug for Inno Setup installers |
 
-Retain the existing \`AMIKEY_UPDATE_KEY\` repository secret. It is still required to create
-the updater manifests. Remove \`CERTUM_EMAIL\` and \`CERTUM_OTP\` only after the first
+Retain the existing `AMIKEY_UPDATE_KEY` repository secret. It is still required to create
+the updater manifests. Remove `CERTUM_EMAIL` and `CERTUM_OTP` only after the first
 SignPath-signed release has been validated and the migration is accepted.
 
 The workflow uses GitHub-hosted runners and GitHub Actions artifacts for the SignPath
-trusted-build integration. The SignPath GitHub Action is pinned to a reviewed commit SHA. Keep the SignPath action's GitHub artifact input and signed
-output directory wiring intact.
+trusted-build integration. The SignPath GitHub Action is pinned to a reviewed commit SHA.
+Keep the SignPath action's GitHub artifact input and signed output directory wiring intact.
 
 ## Certificate identity and SmartScreen
 
@@ -116,7 +116,7 @@ low-reputation files, downloads, or publishers.
 - Never store a PFX/private signing key in the repository, workflow YAML, build artifacts,
   or logs. SignPath manages the signing certificate and signing operation.
 - Store the SignPath API token only as a GitHub Actions secret.
-- Keep \`AMIKEY_UPDATE_KEY\` separate from SignPath. Limit access to repository
+- Keep `AMIKEY_UPDATE_KEY` separate from SignPath. Limit access to repository
   administrators/release maintainers and never print it in workflow logs.
 - Do not upload unsigned or signed production artifacts to public locations other than
   the intended GitHub release.
@@ -133,7 +133,7 @@ credentials in the repository's secret store only if they are still needed by th
 default-branch workflow; do not copy them into this branch's workflow.
 
 Validate both architectures and both installer signatures with Windows
-\`Get-AuthenticodeSignature\` or Microsoft's SignTool. Also verify both updater manifests
+`Get-AuthenticodeSignature` or Microsoft's SignTool. Also verify both updater manifests
 against the public key embedded in the released application. Once the SignPath release
 is accepted, remove the obsolete Certum secrets and retire the old signing path.
 
@@ -143,10 +143,10 @@ is accepted, remove the obsolete Certum secrets and retire the old signing path.
 - [ ] Automatic signing policy configured in SignPath and scoped to the amiKey release project.
 - [ ] EXE and installer artifact configurations tested against the actual uploaded artifact layouts.
 - [ ] GitHub secret and all five repository variables configured.
-- [ ] Release tags \`v*\` restricted to authorized maintainers.
+- [ ] Release tags `v*` restricted to authorized maintainers.
 - [ ] x64 and ARM64 app binaries have valid Authenticode signatures.
 - [ ] x64 and ARM64 installers have valid Authenticode signatures.
-- [ ] Portable ZIPs contain the corresponding signed \`amiKey.exe\`.
+- [ ] Portable ZIPs contain the corresponding signed `amiKey.exe`.
 - [ ] Both Ed25519 updater manifests verify against the app's embedded public key.
 - [ ] A test release installs and updates successfully on supported Windows architectures.
 - [ ] Only after acceptance: remove obsolete Certum credentials.
