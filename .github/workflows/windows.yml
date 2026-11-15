@@ -9,12 +9,10 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: "Existing GitHub release tag to build from, package for and upload to (e.g. v1.0.14)"
+        description: "Existing GitHub release tag to build from, package for and upload to (e.g. v1.0.35)"
         required: false
-      allow_unsigned:
-        description: "Skip Certum signing (even when its secrets exist) and publish unsigned installers"
-        type: boolean
-        default: false
+        type: string
+
 jobs:
   engine:
     strategy:
@@ -25,14 +23,14 @@ jobs:
             arch: x64
           - runner: windows-11-arm
             arch: arm64
-    runs-on: ${{ matrix.runner }}
+    runs-on: \${{ matrix.runner }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          ref: ${{ inputs.release_tag && format('refs/tags/{0}', inputs.release_tag) || '' }}
+          ref: \${{ inputs.release_tag && format('refs/tags/{0}', inputs.release_tag) || '' }}
       - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
         with:
-          arch: ${{ matrix.arch }}
+          arch: \${{ matrix.arch }}
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.12'
@@ -51,103 +49,146 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: hashFiles('Windows/App/CMakeLists.txt') != ''
         with:
-          name: amiKey-windows-${{ matrix.arch }}
+          name: amiKey-windows-\${{ matrix.arch }}
           path: Windows/build/App/amiKey.exe
           if-no-files-found: error
 
-  # Tag v<version>: signed installers, portable zips and the updater's amiKey-update-<arch>.txt onto the GitHub
-  # release (created if missing). Without the Certum or AMIKEY_UPDATE_KEY secrets the job fails, unless run by hand
-  # with allow_unsigned (then no update manifest is published, so installed copies don't update to it).
+  # Release signing is fail-closed: SignPath must return signed binaries and installers.
+  # The Ed25519 updater manifest remains a separate signature over the final signed installer.
   package:
     needs: engine
     if: startsWith(github.ref, 'refs/tags/v') || inputs.release_tag != ''
     runs-on: windows-latest
     permissions:
+      actions: read
       contents: write
     env:
-      RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
-      SSIGN_URL: https://github.com/Le-Syl21/ssign/releases/download/v0.1.8/ssign-windows-x86_64.zip
-      SSIGN_SHA256: 89cbac647d19819a1a82645d2254ac51d2b34050835421294584385dadde1298
+      RELEASE_TAG: \${{ inputs.release_tag || github.ref_name }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          ref: ${{ inputs.release_tag && format('refs/tags/{0}', inputs.release_tag) || '' }}
+          ref: \${{ inputs.release_tag && format('refs/tags/{0}', inputs.release_tag) || '' }}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           path: artifacts
-      - name: Tag matches the version in project.yml
+
+      - name: Validate release tag against project version
         run: |
           $ver = (Select-String -Path project.yml -Pattern 'MARKETING_VERSION: "([^"]+)"').Matches[0].Groups[1].Value
           if ("v$ver" -ne $env:RELEASE_TAG) { throw "tag $env:RELEASE_TAG does not match project.yml version $ver (expected v$ver)" }
+          foreach ($arch in @('x64', 'arm64')) {
+            if (-not (Test-Path "artifacts/amiKey-windows-$arch/amiKey.exe")) { throw "Missing unsigned $arch executable artifact" }
+          }
         shell: pwsh
-      - name: "Sign amiKey.exe (ssign - Certum SimplySign cloud cert, headless)"
-        env:
-          CERTUM_EMAIL: ${{ secrets.CERTUM_EMAIL }}
-          CERTUM_OTP: ${{ secrets.CERTUM_OTP }}
-          ALLOW_UNSIGNED: ${{ inputs.allow_unsigned }}
+
+      # Stage 1: Authenticode-sign both architecture-specific app executables.
+      - name: Upload unsigned app binaries for SignPath
+        id: upload_unsigned_app
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: amiKey-unsigned-app-binaries
+          path: artifacts/amiKey-windows-*/amiKey.exe
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Sign app executables with SignPath
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: \${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: \${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: \${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: \${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          artifact-configuration-slug: \${{ vars.SIGNPATH_EXE_ARTIFACT_CONFIGURATION }}
+          github-artifact-id: \${{ steps.upload_unsigned_app.outputs.artifact-id }}
+          github-token: \${{ github.token }}
+          wait-for-completion: true
+          output-artifact-directory: signed-app
+
+      - name: Replace unsigned executables with SignPath-signed executables
         run: |
-          if ($env:ALLOW_UNSIGNED -eq 'true') { "::warning::allow_unsigned: packaging UNSIGNED installers (Certum signing skipped)" | Out-Host; exit 0 }
-          if (-not $env:CERTUM_OTP) { throw "No CERTUM_OTP secret: refusing to publish unsigned installers (run by hand with allow_unsigned to override)" }
-          Invoke-WebRequest -Uri $env:SSIGN_URL -OutFile ssign.zip
-          $hash = (Get-FileHash ssign.zip -Algorithm SHA256).Hash.ToLower()
-          if ($hash -ne $env:SSIGN_SHA256) { throw "ssign.zip checksum mismatch: $hash" }
-          Expand-Archive ssign.zip -DestinationPath ssign
-          $exe = (Get-ChildItem ssign -Recurse -Filter ssign.exe | Select-Object -First 1).FullName
-          "SSIGN=$exe" >> $env:GITHUB_ENV
-          # one login signs the whole batch
-          & $exe artifacts/amiKey-windows-x64/amiKey.exe artifacts/amiKey-windows-arm64/amiKey.exe
-          if ($LASTEXITCODE -ne 0) { throw "signing amiKey.exe failed" }
+          foreach ($arch in @('x64', 'arm64')) {
+            $signed = Get-ChildItem signed-app -Recurse -Filter amiKey.exe |
+              Where-Object { $_.FullName -match [regex]::Escape("amiKey-windows-$arch") } |
+              Select-Object -First 1
+            if (-not $signed) { throw "SignPath did not return signed amiKey.exe for $arch" }
+            Copy-Item $signed.FullName "artifacts/amiKey-windows-$arch/amiKey.exe" -Force
+          }
         shell: pwsh
-      - name: Installers (Inno Setup) + portable zips
+
+      # Build both installers from the already Authenticode-signed app binaries.
+      # The portable archives therefore also contain the signed amiKey.exe.
+      - name: Build Inno Setup installers and portable archives
         run: |
           $ver = (Select-String -Path project.yml -Pattern 'MARKETING_VERSION: "([^"]+)"').Matches[0].Groups[1].Value
-          "$ver" | Out-Host
           $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
           if (-not (Test-Path $iscc)) { choco install innosetup --version 6.7.1 -y --no-progress; if ($LASTEXITCODE -ne 0) { exit 1 } }
           New-Item -ItemType Directory -Force dist | Out-Null
           foreach ($arch in @('x64', 'arm64')) {
             $src = "artifacts/amiKey-windows-$arch"
             & $iscc "/DVersion=$ver" "/DArch=$arch" "/DSrc=$((Resolve-Path $src).Path)" Windows/installer/amiKey.iss
-            if ($LASTEXITCODE -ne 0) { exit 1 }
+            if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed for $arch" }
             Move-Item "Windows/installer/out/amiKey-$ver-$arch-Setup.exe" dist/
             Compress-Archive -Path "$src/amiKey.exe" -DestinationPath "dist/amiKey-$ver-$arch-portable.zip"
           }
           Get-ChildItem dist | Out-Host
         shell: pwsh
-      - name: Sign installers
-        if: env.SSIGN != ''
-        env:
-          CERTUM_EMAIL: ${{ secrets.CERTUM_EMAIL }}
-          CERTUM_OTP: ${{ secrets.CERTUM_OTP }}
+
+      # Stage 2: Authenticode-sign the two final installer executables.
+      - name: Upload unsigned installers for SignPath
+        id: upload_unsigned_installers
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: amiKey-unsigned-installers
+          path: dist/*-Setup.exe
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Sign installers with SignPath
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: \${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: \${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: \${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: \${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          artifact-configuration-slug: \${{ vars.SIGNPATH_INSTALLER_ARTIFACT_CONFIGURATION }}
+          github-artifact-id: \${{ steps.upload_unsigned_installers.outputs.artifact-id }}
+          github-token: \${{ github.token }}
+          wait-for-completion: true
+          output-artifact-directory: signed-installers
+
+      - name: Replace unsigned installers with SignPath-signed installers
         run: |
-          & $env:SSIGN (Get-ChildItem dist -Filter *-Setup.exe).FullName
-          if ($LASTEXITCODE -ne 0) { throw "signing installers failed" }
-        shell: pwsh
-      - name: Update manifests (Ed25519, read by the app's updater)
-        env:
-          AMIKEY_UPDATE_KEY: ${{ secrets.AMIKEY_UPDATE_KEY }}
-          ALLOW_UNSIGNED: ${{ inputs.allow_unsigned }}
-        run: |
-          if (-not $env:AMIKEY_UPDATE_KEY) {
-            if ($env:ALLOW_UNSIGNED -eq 'true') { "::warning::No AMIKEY_UPDATE_KEY secret: no update manifest (allow_unsigned)" | Out-Host; exit 0 }
-            throw "No AMIKEY_UPDATE_KEY secret: installed copies could not update to this release (run by hand with allow_unsigned to override)"
+          $signedInstallers = Get-ChildItem signed-installers -Recurse -Filter *-Setup.exe
+          if ($signedInstallers.Count -ne 2) { throw "Expected 2 signed installers from SignPath, received $($signedInstallers.Count)" }
+          foreach ($signed in $signedInstallers) {
+            Copy-Item $signed.FullName "dist/$($signed.Name)" -Force
           }
+          if ((Get-ChildItem dist -Filter *-Setup.exe).Count -ne 2) { throw "Final installer set is incomplete" }
+        shell: pwsh
+
+      # Keep this Ed25519 update-manifest process independent from Authenticode.
+      # It signs the bytes of each final, Authenticode-signed installer.
+      - name: Create and verify Ed25519 updater manifests
+        env:
+          AMIKEY_UPDATE_KEY: \${{ secrets.AMIKEY_UPDATE_KEY }}
+        run: |
+          if (-not $env:AMIKEY_UPDATE_KEY) { throw "No AMIKEY_UPDATE_KEY secret: refusing to publish a release without updater manifests" }
           python -m pip install --quiet cryptography==48.0.0
           $ver = (Select-String -Path project.yml -Pattern 'MARKETING_VERSION: "([^"]+)"').Matches[0].Groups[1].Value
           foreach ($arch in @('x64', 'arm64')) {
             $f = "amiKey-$ver-$arch-Setup.exe"
             python Tools/release/sign_update.py $ver $arch "dist/$f" "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$env:RELEASE_TAG/$f" "dist/amiKey-update-$arch.txt"
-            if ($LASTEXITCODE -ne 0) { exit 1 }
+            if ($LASTEXITCODE -ne 0) { throw "Ed25519 manifest generation/verification failed for $arch" }
           }
         shell: pwsh
-      - name: Upload to the release
+
+      - name: Publish signed release assets
         run: |
           $files = (Get-ChildItem dist).FullName
           gh release view "$env:RELEASE_TAG" -R "$env:GITHUB_REPOSITORY" *> $null
-          # a new release is created with its files in one step, so releases/latest never points at a release without them
           if ($LASTEXITCODE -eq 0) { gh release upload "$env:RELEASE_TAG" $files --clobber -R "$env:GITHUB_REPOSITORY" }
           else { gh release create "$env:RELEASE_TAG" $files --verify-tag --latest --title "amiKey $env:RELEASE_TAG" --generate-notes -R "$env:GITHUB_REPOSITORY" }
           if ($LASTEXITCODE -ne 0) { exit 1 }
         shell: pwsh
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: \${{ github.token }}
