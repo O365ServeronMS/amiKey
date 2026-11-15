@@ -42,8 +42,8 @@ release publication. There is no unsigned-release bypass in this workflow.
 
 ## Automatic approval policy
 
-The GitHub workflow submits signing requests automatically for release tags that pass
-the version check. The SignPath project must be configured with a signing policy that
+The GitHub workflow submits signing requests automatically only for pushed release tags
+matching `v*` that pass the version check. There is no manual-dispatch signing path. The SignPath project must be configured with a signing policy that
 automatically approves eligible requests; this is a SignPath-side setting, not a GitHub
 Actions input.
 
@@ -96,7 +96,7 @@ the updater manifests. Remove \`CERTUM_EMAIL\` and \`CERTUM_OTP\` only after the
 SignPath-signed release has been validated and the migration is accepted.
 
 The workflow uses GitHub-hosted runners and GitHub Actions artifacts for the SignPath
-trusted-build integration. Keep the SignPath action's GitHub artifact input and signed
+trusted-build integration. The SignPath GitHub Action is pinned to a reviewed commit SHA. Keep the SignPath action's GitHub artifact input and signed
 output directory wiring intact.
 
 ## Certificate identity and SmartScreen
